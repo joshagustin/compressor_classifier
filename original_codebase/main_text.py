@@ -211,6 +211,7 @@ if __name__ == "__main__":
             )
     else:
         train_pair, test_pair = dataset_pair[0], dataset_pair[1]
+        test_pair = list(test_pair)
         test_data, test_labels = read_torch_text_labels(
             test_pair, range(len(test_pair))
         )
@@ -226,6 +227,7 @@ if __name__ == "__main__":
             )
     else:
         train_pair, test_pair = dataset_pair[0], dataset_pair[1]
+        train_pair = list(train_pair)
         train_data, train_labels = read_torch_text_labels(
             train_pair, range(len(train_pair))
         )
