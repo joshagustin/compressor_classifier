@@ -161,3 +161,8 @@ cython_debug/
 notebooks/
 junit/
 *.npy
+
+# MacOS
+.DS_Store
+
+/data/datasets/

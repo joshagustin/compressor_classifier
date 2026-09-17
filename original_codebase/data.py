@@ -115,6 +115,33 @@ def read_torch_text_labels(dataset: list, indices: Sequence[int]) -> tuple:
     return text_list, label_list
 
 
+def load_dbpedia(data_directory: str) -> tuple:
+    """
+    Loads the DBpedia dataset from a directory.
+
+    From TorchText, :ref: "https://drive.google.com/uc?export=download&id=0Bz8a_Dbh9QhbQ2Vic1kxMmZZQ1k"
+
+    Returns:
+            tuple: Tuple of Lists, with training data at index 0 and test at
+                   index 1.
+    """
+    def process(filename: str) -> list:
+        processed_data = []
+        with open(filename, mode="r") as file:
+            reader = csv.reader(file)
+            for row in reader:
+                label, title, content = row
+                label = int(label)
+                text = f"{title}{content}"
+                processed_data.append((label, text))
+        return processed_data
+
+    test_fn = os.path.join(data_directory, "test.csv")
+    train_fn = os.path.join(data_directory, "train.csv")
+    train_ds, test_ds = process(train_fn), process(test_fn)
+    return train_ds, test_ds
+    
+
 def load_20news() -> tuple:
     """
     Loads the 20NewsGroups dataset from `torchtext`.

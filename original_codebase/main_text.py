@@ -11,7 +11,6 @@ from torchtext.datasets import (
     AG_NEWS,
     IMDB,
     AmazonReviewPolarity,
-    DBpedia,
     SogouNews,
     YahooAnswers,
     YelpReviewPolarity,
@@ -156,6 +155,7 @@ if __name__ == "__main__":
     data_dir = os.path.join(args.data_dir, args.dataset)
     if args.dataset not in [
         "20News",
+        "DBpedia",
         "Ohsumed",
         "Ohsumed_single",
         "R8",
@@ -170,6 +170,8 @@ if __name__ == "__main__":
     else:
         if args.dataset == "20News":
             dataset_pair = load_20news()
+        elif args.dataset == "DBpedia":
+            dataset_pair = load_dbpedia(args.data_dir)
         elif args.dataset == "Ohsumed":
             dataset_pair = load_ohsumed(args.data_dir)
         elif args.dataset == "Ohsumed_single":

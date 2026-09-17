@@ -1,0 +1,20 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "main_text with all data",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/original_codebase/main_text.py",
+            "console": "integratedTerminal",
+            "args": [
+                "--all_test",
+                "--all_train",
+                "--dataset",
+                "DBpedia",
+                "--data_dir",
+                "data/datasets/DBpedia"
+            ]
+        }
+    ]
+}
