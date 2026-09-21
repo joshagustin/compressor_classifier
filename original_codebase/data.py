@@ -229,28 +229,28 @@ def load_ohsumed(data_directory: str) -> tuple:
     return train_ds, test_ds
 
 
-def load_r8(data_directory: str, delimiter: str = "\t") -> tuple:
+def load_r8(data_directory: str) -> tuple:
     """
-    Loads the R8 dataset.
+    Loads the R8 dataset from a directory.
 
-    Arguments:
-        data_directory (str): Directory containing the R8 dataset.
-        delimiter (str): File delimiter to parse on.
+    From Hugging Face, :ref: "https://huggingface.co/datasets/dxgp/R8"
 
     Returns:
-        tuple: Tuple of lists containing the training and testing datasets respectively.
+            tuple: Tuple of Lists, with training data at index 0 and test at
+                    index 1.
     """
-
     def process(filename: str) -> list:
         processed_data = []
-        text_list = open(filename, "r").read().strip().split("\n")
-        for row in text_list:
-            label, text = row.split(delimiter)
-            processed_data.append((label, text))
+        with open(filename, mode="r") as file:
+            reader = csv.reader(file)
+            for row in reader:
+                label, text = row
+                label = int(label)
+                processed_data.append((label, text))
         return processed_data
-
-    test_fn = os.path.join(data_directory, "test.txt")
-    train_fn = os.path.join(data_directory, "train.txt")
+    
+    test_fn = os.path.join(data_directory, "test.csv")
+    train_fn = os.path.join(data_directory, "train.csv")
     train_ds, test_ds = process(train_fn), process(test_fn)
     return train_ds, test_ds
 

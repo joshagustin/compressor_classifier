@@ -11,9 +11,9 @@
                 "--all_test",
                 "--all_train",
                 "--dataset",
-                "Ohsumed",
+                "R8",
                 "--data_dir",
-                "data/datasets/Ohsumed/"
+                "data/datasets/R8/"
             ]
         }
     ]
