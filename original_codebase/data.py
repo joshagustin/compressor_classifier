@@ -203,34 +203,29 @@ def load_ohsumed_single(local_directory: str) -> tuple:
     return train_ds, test_ds
 
 
-def load_ohsumed(data_directory: str, split: float = 0.9) -> tuple:
+def load_ohsumed(data_directory: str) -> tuple:
     """
-    Loads the Ohsumed dataset and performs a train-test-split.
+    Loads the Ohsumed dataset from a directory.
 
-    Arguments:
-        data_directory (str): Directory containing the ohsumed dataset.
-        split (float): % train size split.
+    From Hugging Face, :ref: "https://huggingface.co/datasets/dxgp/ohsumed"
 
     Returns:
-        tuple: Tuple of lists containing the training and testing datasets respectively.
-
+            tuple: Tuple of Lists, with training data at index 0 and test at
+                    index 1.
     """
-    train_ds = []
-    test_ds = []
-
-    for directory_name in os.listdir(data_directory):
-        if os.path.isdir(os.path.join(data_directory, directory_name)):
-            label = directory_name
-            subdirectory = os.path.join(data_directory, directory_name)
-            subdirectory_files = list(os.listdir(subdirectory))
-
-            for filename in subdirectory_files:
-                text = open(os.path.join(subdirectory, filename), "r").read().strip()
-                if random.random() <= split:
-                    train_ds.append((label, text))
-                else:
-                    test_ds.append((label, text))
-
+    def process(filename: str) -> list:
+        processed_data = []
+        with open(filename, mode="r") as file:
+            reader = csv.reader(file)
+            for row in reader:
+                label, text = row
+                label = int(label)
+                processed_data.append((label, text))
+        return processed_data
+    
+    test_fn = os.path.join(data_directory, "test.csv")
+    train_fn = os.path.join(data_directory, "train.csv")
+    train_ds, test_ds = process(train_fn), process(test_fn)
     return train_ds, test_ds
 
 

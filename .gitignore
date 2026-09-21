@@ -165,4 +165,5 @@ junit/
 # MacOS
 .DS_Store
 
-/data/datasets/
+# Too large for Github
+/data/datasets/DBpedia

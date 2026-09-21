@@ -11,9 +11,9 @@
                 "--all_test",
                 "--all_train",
                 "--dataset",
-                "DBpedia",
+                "Ohsumed",
                 "--data_dir",
-                "data/datasets/DBpedia"
+                "data/datasets/Ohsumed/"
             ]
         }
     ]
