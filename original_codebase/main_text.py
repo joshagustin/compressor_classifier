@@ -36,7 +36,7 @@ def non_neural_knn_exp(
     knn_exp_ins = KnnExpText(agg_func, cp, dis_func)
     start = time.time()
     if para:
-        with Pool(5) as p:
+        with Pool(8) as p:
             pred_correct_pair = p.map(
                 partial(knn_exp_ins.combine_dis_acc_single, k, train_data, train_label),
                 test_data,
@@ -119,7 +119,7 @@ if __name__ == "__main__":
     parser.add_argument("--test_idx_end", type=int, default=None)
     parser.add_argument("--distance_fn", default=None)
     parser.add_argument("--score", action="store_true", default=False)
-    parser.add_argument("--k", default=2, type=int)
+    parser.add_argument("--k", default=1, type=int)
     parser.add_argument("--class_num", default=5, type=int)
     parser.add_argument("--random", action="store_true", default=False)
     args = parser.parse_args()

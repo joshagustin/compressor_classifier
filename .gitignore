@@ -167,3 +167,6 @@ junit/
 
 # Too large for Github
 /data/datasets/DBpedia
+
+# Unused
+/original_codebase/.vscode/

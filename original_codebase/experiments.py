@@ -210,7 +210,7 @@ class KnnExpText:
             end = k + 1
 
         for i in range(len(self.distance_matrix)):
-            sorted_idx = np.argsort(np.array(self.distance_matrix[i]))
+            sorted_idx = np.argpartition(np.array(self.distance_matrix[i]), range(k))
             pred_labels = defaultdict(int)
             for j in range(start, end):
                 pred_l = compare_label[sorted_idx[j]]
@@ -219,21 +219,16 @@ class KnnExpText:
                 pred_labels.items(), key=operator.itemgetter(1), reverse=True
             )
             most_count = sorted_pred_lab[0][1]
-            if_right = 0
             most_label = sorted_pred_lab[0][0]
-            most_voted_labels = []
-            for pair in sorted_pred_lab:
-                if pair[1] < most_count:
-                    break
-                if not rand:
-                    if pair[0] == label[i]:
-                        if_right = 1
-                        most_label = pair[0]
-                else:
-                    most_voted_labels.append(pair[0])
-            if rand:
-                most_label = random.choice(most_voted_labels)
-                if_right = 1 if most_label == label[i] else 0
+
+            # kNN classifier based on a plurality vote. If there exists a counting
+            # tie (e.g. 1-1-1 for k=3), it considers the closest neighbor based on NCD.
+            # If there are ties in NCD, it considers which label appears first in the
+            # training data.
+            if_right = 0
+            if most_label == label[i]:
+                if_right = 1
+
             pred.append(most_label)
             correct.append(if_right)
         print("Accuracy is {}".format(sum(correct) / len(correct)))
@@ -332,14 +327,16 @@ class KnnExpText:
             pred_labels.items(), key=operator.itemgetter(1), reverse=True
         )
         most_count = sorted_pred_lab[0][1]
-        if_right = 0
         most_label = sorted_pred_lab[0][0]
-        for pair in sorted_pred_lab:
-            if pair[1] < most_count:
-                break
-            if pair[0] == label:
-                if_right = 1
-                most_label = pair[0]
+        
+        # kNN classifier based on a plurality vote. If there exists a counting
+        # tie (e.g. 1-1-1 for k=3), it considers the closest neighbor based on NCD.
+        # If there are ties in NCD, it considers which label appears first in the
+        # training data.
+        if_right = 0
+        if most_label == label:
+            if_right = 1
+
         pred = most_label
         correct = if_right
         return pred, correct
