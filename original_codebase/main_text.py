@@ -3,6 +3,7 @@ import time
 from functools import partial
 from typing import Callable
 
+from preprocess import *
 from compressors import *
 from data import *
 from experiments import *
@@ -34,6 +35,12 @@ def non_neural_knn_exp(
     print("KNN with compressor={}".format(compressor_name))
     cp = DefaultCompressor(compressor_name)
     knn_exp_ins = KnnExpText(agg_func, cp, dis_func)
+
+    pre_start = time.time()
+    train_data = preprocess(train_data)
+    test_data = preprocess(test_data)
+    pre_end = time.time()
+    
     start = time.time()
     if para:
         with Pool(8) as p:
@@ -52,6 +59,7 @@ def non_neural_knn_exp(
         knn_exp_ins.calc_dis(test_data, train_data=train_data)
         knn_exp_ins.calc_acc(k, test_label, train_label=train_label)
     print("spent: {}".format(time.time() - start))
+    print(f"preprocessing: {pre_end - pre_start}")
 
 
 def record_distance(

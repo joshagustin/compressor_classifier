@@ -11,10 +11,7 @@
                 "--all_test",
                 "--all_train",
                 "--dataset",
-                "R8",
-                "--data_dir",
-                "data/datasets/R8/",
-                "--para"
+                "20News",
             ]
         }
     ]
