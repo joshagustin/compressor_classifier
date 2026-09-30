@@ -3,15 +3,12 @@
     "configurations": [
         {
             "name": "main_text with all data",
+            "justMyCode": false,
             "type": "debugpy",
             "request": "launch",
-            "program": "${workspaceFolder}/original_codebase/main_text.py",
+            "program": "${workspaceFolder}/original_codebase/preprocess.py",
             "console": "integratedTerminal",
             "args": [
-                "--all_test",
-                "--all_train",
-                "--dataset",
-                "20News",
             ]
         }
     ]
