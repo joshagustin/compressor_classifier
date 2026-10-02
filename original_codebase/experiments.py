@@ -15,11 +15,32 @@ class KnnExpText:
         aggregation_function: Callable,
         compressor: DefaultCompressor,
         distance_function: Callable,
+        data: list
     ) -> None:
         self.aggregation_func = aggregation_function
         self.compressor = compressor
         self.distance_func = distance_function
         self.distance_matrix: list = []
+        self.inverted_index = defaultdict(list)
+        self.create_inverted_index(data)
+
+    def create_inverted_index(self, data: list) -> None:
+        """
+        Constructs an inverted index mapping terms in `data` to the indices
+        where they appear. Ensure that `data` has already been preprocessed.
+
+        term -> posting list
+
+        Arguments:
+            data (list[str]): Corpus upon which index will be constructed.
+
+        Returns:
+            None: None
+        """
+
+        for index, row in enumerate(data):
+            for token in set(row.split()):
+                self.inverted_index[token].append(index)
 
     def calc_dis(
         self, data: list, train_data: Optional[list] = None, fast: bool = False
@@ -141,9 +162,12 @@ class KnnExpText:
         distance4i = []
         t1_compressed = self.compressor.get_compressed_len(datum)
         for j, t2 in tqdm(enumerate(train_data)):
-            t2_compressed = self.compressor.get_compressed_len(t2)
+            if not t2[0]:
+                distance4i.append(1)
+                continue
+            t2_compressed = self.compressor.get_compressed_len(t2[1])
             t1t2_compressed = self.compressor.get_compressed_len(
-                self.aggregation_func(datum, t2)
+                self.aggregation_func(datum, t2[1])
             )
             distance = self.distance_func(t1_compressed, t2_compressed, t1t2_compressed)
             distance4i.append(distance)
@@ -256,6 +280,7 @@ class KnnExpText:
         Returns:
             tuple: predictions, and list of bools indicating prediction correctness.
         """
+
         correct = []
         pred = []
         if train_label is not None:
@@ -294,6 +319,32 @@ class KnnExpText:
         print("Accuracy is {}".format(sum(correct) / len(correct)))
         return pred, correct
 
+    def filter_candidates(self, train_data: list, datum: str):
+        """
+        Flags the candidates where datum's terms appear.
+
+        Arguments:
+            train_data (list[str]): Training data to be flagged.
+            datum (str): Search string.
+
+        Returns:
+            flagged_train_data (list[list[bool, str]]): Flagged training rows which
+                                                            show relevance to `datum`.
+        """
+        
+        flagged_train_data = [[False, text] for text in train_data]
+
+        datum_tokens = set(datum.split())
+        flagged_indices = set()
+
+        for token in datum_tokens:
+            flagged_indices = flagged_indices.union(self.inverted_index[token])
+
+        for index in flagged_indices:
+            flagged_train_data[index][0] = True
+
+        return flagged_train_data
+
     def combine_dis_acc_single(
         self,
         k: int,
@@ -316,8 +367,10 @@ class KnnExpText:
         Returns:
             tuple: prediction, and a bool indicating prediction correctness.
         """
+        
+        flagged_train_data = self.filter_candidates(train_data, datum)
         # Support multi processing - must provide train data and train label
-        distance4i = self.calc_dis_single_multi(train_data, datum)
+        distance4i = self.calc_dis_single_multi(flagged_train_data, datum)
         sorted_idx = np.argpartition(np.array(distance4i), range(k))
         pred_labels = defaultdict(int)
         for j in range(k):

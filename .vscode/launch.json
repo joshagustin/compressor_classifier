@@ -3,12 +3,19 @@
     "configurations": [
         {
             "name": "main_text with all data",
-            "justMyCode": false,
+            "justMyCode": true,
             "type": "debugpy",
             "request": "launch",
-            "program": "${workspaceFolder}/original_codebase/preprocess.py",
+            "program": "${workspaceFolder}/original_codebase/main_text.py",
             "console": "integratedTerminal",
             "args": [
+                "--all_train",
+                "--all_test",
+                "--para",
+                "--dataset",
+                "Ohsumed",
+                "--data_dir",
+                "data/datasets/Ohsumed"
             ]
         }
     ]

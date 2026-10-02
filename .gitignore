@@ -170,3 +170,5 @@ junit/
 
 # Unused
 /original_codebase/.vscode/
+/preprocessed
+original_codebase/output_preprocessed.py

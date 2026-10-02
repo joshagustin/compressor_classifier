@@ -32,14 +32,14 @@ def non_neural_knn_exp(
     k: int,
     para: bool = True,
 ):
-    print("KNN with compressor={}".format(compressor_name))
-    cp = DefaultCompressor(compressor_name)
-    knn_exp_ins = KnnExpText(agg_func, cp, dis_func)
-
     pre_start = time.time()
     train_data = preprocess(train_data)
     test_data = preprocess(test_data)
     pre_end = time.time()
+
+    print("KNN with compressor={}".format(compressor_name))
+    cp = DefaultCompressor(compressor_name)
+    knn_exp_ins = KnnExpText(agg_func, cp, dis_func, train_data)
     
     start = time.time()
     if para:
