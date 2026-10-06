@@ -54,6 +54,8 @@ def non_neural_knn_exp(
                 np.average(np.array(pred_correct_pair, dtype=np.int32)[:, 1])
             )
         )
+        print(f"average hits: {np.average(np.array(pred_correct_pair)[:,2])}")
+        print(f"training rows: {len(train_data)}")
         # print('accuracy:{}'.format(np.average(np.array(pred_correct_pair, dtype=np.object_)[:, 1])))
     else:
         knn_exp_ins.calc_dis(test_data, train_data=train_data)

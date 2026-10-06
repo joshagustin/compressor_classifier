@@ -12,10 +12,6 @@
                 "--all_train",
                 "--all_test",
                 "--para",
-                "--dataset",
-                "Ohsumed",
-                "--data_dir",
-                "data/datasets/Ohsumed"
             ]
         }
     ]

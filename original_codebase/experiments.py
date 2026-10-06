@@ -319,7 +319,7 @@ class KnnExpText:
         print("Accuracy is {}".format(sum(correct) / len(correct)))
         return pred, correct
 
-    def filter_candidates(self, train_data: list, datum: str):
+    def flag_candidates(self, train_data: list, datum: str):
         """
         Flags the candidates where datum's terms appear.
 
@@ -343,7 +343,9 @@ class KnnExpText:
         for index in flagged_indices:
             flagged_train_data[index][0] = True
 
-        return flagged_train_data
+
+        relevant_document_count = len(flagged_indices)
+        return flagged_train_data, relevant_document_count
 
     def combine_dis_acc_single(
         self,
@@ -368,7 +370,7 @@ class KnnExpText:
             tuple: prediction, and a bool indicating prediction correctness.
         """
         
-        flagged_train_data = self.filter_candidates(train_data, datum)
+        flagged_train_data, hits = self.flag_candidates(train_data, datum)
         # Support multi processing - must provide train data and train label
         distance4i = self.calc_dis_single_multi(flagged_train_data, datum)
         sorted_idx = np.argpartition(np.array(distance4i), range(k))
@@ -392,4 +394,4 @@ class KnnExpText:
 
         pred = most_label
         correct = if_right
-        return pred, correct
+        return pred, correct, hits
