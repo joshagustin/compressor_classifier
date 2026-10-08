@@ -37,11 +37,11 @@ def non_neural_knn_exp(
     test_data = preprocess(test_data)
     pre_end = time.time()
 
+    start = time.time()
     print("KNN with compressor={}".format(compressor_name))
     cp = DefaultCompressor(compressor_name)
     knn_exp_ins = KnnExpText(agg_func, cp, dis_func, train_data)
     
-    start = time.time()
     if para:
         with Pool(8) as p:
             pred_correct_pair = p.map(
