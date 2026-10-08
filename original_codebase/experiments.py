@@ -1,7 +1,10 @@
 # Experiment framework
 import operator
 import random
-from collections import defaultdict
+import math
+import heapq 
+
+from collections import defaultdict, Counter
 from typing import Any, Callable, Optional
 
 import numpy as np
@@ -30,6 +33,8 @@ class KnnExpText:
         where they appear. Ensure that `data` has already been preprocessed.
 
         term -> posting list
+        
+        A posting list contains tuples of (docID, term_frequency).
 
         Arguments:
             data (list[str]): Corpus upon which index will be constructed.
@@ -39,8 +44,10 @@ class KnnExpText:
         """
 
         for index, row in enumerate(data):
-            for token in set(row.split()):
-                self.inverted_index[token].append(index)
+            tokens = Counter(row.split())
+
+            for token, frequency in tokens.items():
+                self.inverted_index[token].append((index, frequency))
 
     def calc_dis(
         self, data: list, train_data: Optional[list] = None, fast: bool = False
@@ -331,21 +338,63 @@ class KnnExpText:
             flagged_train_data (list[list[bool, str]]): Flagged training rows which
                                                             show relevance to `datum`.
         """
-        
+        train_data_length = len(train_data)
         flagged_train_data = [[False, text] for text in train_data]
 
-        datum_tokens = set(datum.split())
-        flagged_indices = set()
+        datum_tokens = Counter(datum.split())
 
-        for token in datum_tokens:
-            flagged_indices = flagged_indices.union(self.inverted_index[token])
+        scores = defaultdict(float)
+        normalization_factors = defaultdict(list)
 
-        for index in flagged_indices:
+        for token, token_freq in datum_tokens.items():
+            if self.inverted_index[token] == 0:
+                continue
+            
+            # compute tf_idf query token
+            datum_tf_idf = self.compute_tf_idf(token, token_freq, train_data_length)
+
+            for doc_id, freq in self.inverted_index[token]:
+                doc_tf_idf = self.compute_tf_idf(token, freq, train_data_length)
+                # add to score of doc d
+                scores[doc_id] += datum_tf_idf * doc_tf_idf
+                normalization_factors[doc_id].append(doc_tf_idf)
+
+        # compute score
+        for doc_id, score in scores.items():
+            euclidean_length = self.compute_euclidean_length(normalization_factors[doc_id])
+            scores[doc_id] = scores[doc_id] / euclidean_length
+
+
+        top_k_scores = heapq.nlargest(100, scores, key=scores.get)
+
+
+        for index in top_k_scores:
             flagged_train_data[index][0] = True
 
 
-        relevant_document_count = len(flagged_indices)
+        relevant_document_count = len(top_k_scores)
         return flagged_train_data, relevant_document_count
+
+    def compute_euclidean_length(self, factors: list) -> float:
+        result = math.sqrt(sum(factor ** 2 for factor in factors))
+
+        return result
+
+    def compute_tf_idf(self, term: str, term_freq: int, n: int):
+        posting_list = self.inverted_index[term]
+
+        if posting_list == 0:
+            return 0
+
+        doc_freq = len(posting_list)
+
+        # before adding this check, performance was so slow
+        if doc_freq == 0:
+            return 0
+        inverse_doc_freq = math.log(n/doc_freq)
+        tf_idf = term_freq * inverse_doc_freq
+
+        return tf_idf
 
     def combine_dis_acc_single(
         self,
