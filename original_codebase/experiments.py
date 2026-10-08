@@ -53,6 +53,19 @@ class KnnExpText:
                 self.inverted_index[token].append((index, frequency))
 
     def create_euclidean_length_index(self, data: list) -> None:
+        """
+        Constructs an index mapping indices in `data` to the Euclidean lengths
+        of their vectors (tf-idf weights).
+
+        index -> Euclidean length of `data[index]`
+
+        Arguments:
+            data (list[str]): Corpus upon which index will be constructed.
+
+        Returns:
+            None: None
+        """
+
         for index, row in enumerate(data):
             tokens = Counter(row.split())
 
@@ -183,9 +196,6 @@ class KnnExpText:
         distance4i = []
         t1_compressed = self.compressor.get_compressed_len(datum)
         for j, t2 in tqdm(enumerate(train_data)):
-            if not t2[0]:
-                distance4i.append(1)
-                continue
             t2_compressed = self.compressor.get_compressed_len(t2[1])
             t1t2_compressed = self.compressor.get_compressed_len(
                 self.aggregation_func(datum, t2[1])
@@ -340,28 +350,42 @@ class KnnExpText:
         print("Accuracy is {}".format(sum(correct) / len(correct)))
         return pred, correct
 
-    def flag_candidates(self, train_data: list, datum: str):
+    def filter_candidates(self, train_data: list, datum: str):
         """
-        Flags the candidates where datum's terms appear.
+        Filters `train_data` to only the documents relevant to `datum`. 
 
         Arguments:
-            train_data (list[str]): Training data to be flagged.
+            train_data (list[str]): Training data to be filtered.
             datum (str): Search string.
 
         Returns:
-            flagged_train_data (list[list[bool, str]]): Flagged training rows which
-                                                            show relevance to `datum`.
+            candidate_data (list[(int, str)]): Filtered candidates that
+                                              show relevance to `datum`.
         """
-        flagged_train_data = [[False, text] for text in train_data]
+
+        candidate_data = []
 
         top_k_scores = self.compute_document_scores(train_data, datum, 100)
         for index in top_k_scores:
-            flagged_train_data[index][0] = True
+            candidate_data.append((index, train_data[index]))
 
         relevant_document_count = len(top_k_scores)
-        return flagged_train_data, relevant_document_count
+        return candidate_data, relevant_document_count
 
     def compute_document_scores(self, train_data: list, datum: str, top_k: int) -> list:
+        """
+        Documents in `train_data` are scored and ranked based on cosine 
+        similarity to `datum`. Vectors make use of tf-idf weights.
+
+        Arguments:
+            train_data (list[str]): Training data to be scored and ranked.
+            datum (str): Search string.
+            top_k (int): Number of documents to be returned.
+
+        Returns:
+            (list): Indices of top_k documents.
+        """
+        
         datum_tokens = Counter(datum.split())
 
         scores = defaultdict(float)
@@ -384,10 +408,32 @@ class KnnExpText:
         return heapq.nlargest(top_k, scores, key=scores.get)
 
     def compute_euclidean_length(self, factors: list) -> float:
+        """
+        Computes the Euclidean length of a vector based on 
+        the factors (components) in the vector.
+
+        Arguments:
+            factors (list): Components of the vector.
+
+        Returns:
+            result (float): Euclidean length of vector.
+        """
+
         result = math.sqrt(sum(factor ** 2 for factor in factors))
         return result
 
     def compute_tf_idf(self, term: str, term_freq: int) -> float:
+        """
+        Computes the Term Frequency-Inverse Document Frequency (TF-IDF)
+        weight of the given term.
+
+        Arguments:
+            term (str): Term to be considered.
+            term_freq (int): Frequency of term in document
+
+        Returns:
+            tf_idf (float): TF-IDF weight.
+        """
         posting_list = self.inverted_index[term]
         doc_freq = len(posting_list)
         idf = math.log(self.document_count/doc_freq)
@@ -417,13 +463,14 @@ class KnnExpText:
             tuple: prediction, and a bool indicating prediction correctness.
         """
         
-        flagged_train_data, hits = self.flag_candidates(train_data, datum)
+        candidate_data, hits = self.filter_candidates(train_data, datum)
         # Support multi processing - must provide train data and train label
-        distance4i = self.calc_dis_single_multi(flagged_train_data, datum)
+        distance4i = self.calc_dis_single_multi(candidate_data, datum)
         sorted_idx = np.argpartition(np.array(distance4i), range(k))
+        sorted_indices = [candidate_data[idx][0] for idx in sorted_idx]
         pred_labels = defaultdict(int)
         for j in range(k):
-            pred_l = train_label[sorted_idx[j]]
+            pred_l = train_label[sorted_indices[j]]
             pred_labels[pred_l] += 1
         sorted_pred_lab = sorted(
             pred_labels.items(), key=operator.itemgetter(1), reverse=True
