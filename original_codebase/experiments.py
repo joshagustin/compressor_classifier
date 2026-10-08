@@ -24,8 +24,11 @@ class KnnExpText:
         self.compressor = compressor
         self.distance_func = distance_function
         self.distance_matrix: list = []
+        self.document_count = len(data)
         self.inverted_index = defaultdict(list)
+        self.euclidean_lengths = defaultdict(float)
         self.create_inverted_index(data)
+        self.create_euclidean_length_index(data)
 
     def create_inverted_index(self, data: list) -> None:
         """
@@ -48,6 +51,17 @@ class KnnExpText:
 
             for token, frequency in tokens.items():
                 self.inverted_index[token].append((index, frequency))
+
+    def create_euclidean_length_index(self, data: list) -> None:
+        for index, row in enumerate(data):
+            tokens = Counter(row.split())
+
+            normalization_factors = []
+            for token, frequency in tokens.items():
+                factor = self.compute_tf_idf(token, frequency)
+                normalization_factors.append(factor)
+
+            self.euclidean_lengths[index] = self.compute_euclidean_length(normalization_factors)
 
     def calc_dis(
         self, data: list, train_data: Optional[list] = None, fast: bool = False
@@ -338,62 +352,46 @@ class KnnExpText:
             flagged_train_data (list[list[bool, str]]): Flagged training rows which
                                                             show relevance to `datum`.
         """
-        train_data_length = len(train_data)
         flagged_train_data = [[False, text] for text in train_data]
 
-        datum_tokens = Counter(datum.split())
-
-        scores = defaultdict(float)
-        normalization_factors = defaultdict(list)
-
-        for token, token_freq in datum_tokens.items():
-            if self.inverted_index[token] == 0:
-                continue
-            
-            # compute tf_idf query token
-            datum_tf_idf = self.compute_tf_idf(token, token_freq, train_data_length)
-
-            for doc_id, freq in self.inverted_index[token]:
-                doc_tf_idf = self.compute_tf_idf(token, freq, train_data_length)
-                # add to score of doc d
-                scores[doc_id] += datum_tf_idf * doc_tf_idf
-                normalization_factors[doc_id].append(doc_tf_idf)
-
-        # compute score
-        for doc_id, score in scores.items():
-            euclidean_length = self.compute_euclidean_length(normalization_factors[doc_id])
-            scores[doc_id] = scores[doc_id] / euclidean_length
-
-
-        top_k_scores = heapq.nlargest(100, scores, key=scores.get)
-
-
+        top_k_scores = self.compute_document_scores(train_data, datum, 100)
         for index in top_k_scores:
             flagged_train_data[index][0] = True
-
 
         relevant_document_count = len(top_k_scores)
         return flagged_train_data, relevant_document_count
 
+    def compute_document_scores(self, train_data: list, datum: str, top_k: int) -> list:
+        datum_tokens = Counter(datum.split())
+
+        scores = defaultdict(float)
+
+        for token, token_freq in datum_tokens.items():
+            posting_list = self.inverted_index.get(token)
+            if not posting_list:
+                continue
+
+            idf = math.log(self.document_count/len(posting_list))
+            datum_tf_idf = token_freq * idf
+            for doc_id, term_freq in self.inverted_index[token]:
+                doc_tf_idf = term_freq * idf
+
+                scores[doc_id] += datum_tf_idf * doc_tf_idf
+
+        for doc_id, score in scores.items():
+            scores[doc_id] = scores[doc_id] / self.euclidean_lengths[doc_id]
+
+        return heapq.nlargest(top_k, scores, key=scores.get)
+
     def compute_euclidean_length(self, factors: list) -> float:
         result = math.sqrt(sum(factor ** 2 for factor in factors))
-
         return result
 
-    def compute_tf_idf(self, term: str, term_freq: int, n: int):
+    def compute_tf_idf(self, term: str, term_freq: int) -> float:
         posting_list = self.inverted_index[term]
-
-        if posting_list == 0:
-            return 0
-
         doc_freq = len(posting_list)
-
-        # before adding this check, performance was so slow
-        if doc_freq == 0:
-            return 0
-        inverse_doc_freq = math.log(n/doc_freq)
-        tf_idf = term_freq * inverse_doc_freq
-
+        idf = math.log(self.document_count/doc_freq)
+        tf_idf = term_freq * idf
         return tf_idf
 
     def combine_dis_acc_single(
