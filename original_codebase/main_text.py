@@ -3,6 +3,7 @@ import time
 from functools import partial
 from typing import Callable
 
+from metrics import *
 from preprocess import *
 from compressors import *
 from data import *
@@ -35,9 +36,9 @@ def non_neural_knn_exp(
     pre_start = time.time()
     train_data = preprocess(train_data)
     test_data = preprocess(test_data)
-    pre_end = time.time()
+    pre_duration = time.time() - pre_start
 
-    start = time.time()
+    exp_start = time.time()
     print("KNN with compressor={}".format(compressor_name))
     cp = DefaultCompressor(compressor_name)
     knn_exp_ins = KnnExpText(agg_func, cp, dis_func, train_data)
@@ -49,19 +50,27 @@ def non_neural_knn_exp(
                 test_data,
                 test_label,
             )
+        pred_correct_pair = np.array(pred_correct_pair, dtype=np.int32)
         print(
-            "accuracy:{}".format(
-                np.average(np.array(pred_correct_pair, dtype=np.int32)[:, 1])
+            "\naccuracy:{}".format(
+                np.average(pred_correct_pair[:, 1])
             )
         )
-        print(f"average hits: {np.average(np.array(pred_correct_pair)[:,2])}")
-        print(f"training rows: {len(train_data)}")
-        # print('accuracy:{}'.format(np.average(np.array(pred_correct_pair, dtype=np.object_)[:, 1])))
+        print(f"\naverage hits: {np.average(pred_correct_pair[:,2])}")
+        print(f"training rows: {len(train_data)}\n")
     else:
         knn_exp_ins.calc_dis(test_data, train_data=train_data)
         knn_exp_ins.calc_acc(k, test_label, train_label=train_label)
-    print("spent: {}".format(time.time() - start))
-    print(f"preprocessing: {pre_end - pre_start}")
+
+    exp_duration = time.time() - exp_start
+    print(f"preprocessing time: {pre_duration}")
+    print(f"experiment time: {exp_duration}")
+    print(f"total time: {pre_duration + exp_duration}\n")
+
+    pred_labels = list(pred_correct_pair[:, 0])
+    times = [pre_duration, exp_duration]
+    
+    return test_label, pred_labels, times
 
 
 def record_distance(
@@ -132,6 +141,8 @@ if __name__ == "__main__":
     parser.add_argument("--k", default=1, type=int)
     parser.add_argument("--class_num", default=5, type=int)
     parser.add_argument("--random", action="store_true", default=False)
+    parser.add_argument("--runs", type=int, default=1)
+    parser.add_argument("--report_dir", type=str, default=None)
     args = parser.parse_args()
     # create output dir
     if not os.path.exists(args.output_dir):
@@ -244,16 +255,29 @@ if __name__ == "__main__":
             train_pair, range(len(train_pair))
         )
     if not args.record:
-        non_neural_knn_exp(
-            args.compressor,
-            test_data,
-            test_labels,
-            train_data,
-            train_labels,
-            agg_by_concat_space,
-            NCD,
-            args.k,
-            para=args.para,
+        times = []
+        lab = None
+        pred = None
+        for i in range(args.runs):
+            lab, pred, runtime = non_neural_knn_exp(
+                args.compressor,
+                test_data,
+                test_labels,
+                train_data,
+                train_labels,
+                agg_by_concat_space,
+                NCD,
+                args.k,
+                para=args.para,
+            )
+            times.append(runtime)
+        report_ins = GenerateReport(
+            lab,
+            pred,
+            times, 
+            args.dataset,
+            args.report_dir,
+            args.k
         )
     else:
         if not args.score:
