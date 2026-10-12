@@ -24,9 +24,9 @@
 22,0.33138,0.26969,0.29737
 accuracy,0.51373
 macro avg,0.46016,0.36572,0.38991
-preprocessing avg time,17.10972
-experiment avg time,56.33258
-total avg time,73.44231
+preprocessing avg time,16.89635
+experiment avg time,54.36101
+total avg time,71.25736
 runs,3
 k,5
 dataset,Ohsumed

@@ -18,7 +18,8 @@ class KnnExpText:
         aggregation_function: Callable,
         compressor: DefaultCompressor,
         distance_function: Callable,
-        data: list
+        data: list,
+        candidate_count: int
     ) -> None:
         self.aggregation_func = aggregation_function
         self.compressor = compressor
@@ -27,6 +28,7 @@ class KnnExpText:
         self.document_count = len(data)
         self.inverted_index = defaultdict(list)
         self.euclidean_lengths = defaultdict(float)
+        self.candidate_count = candidate_count
         self.create_inverted_index(data)
         self.create_euclidean_length_index(data)
 
@@ -365,7 +367,7 @@ class KnnExpText:
 
         candidate_data = []
 
-        top_k_scores = self.compute_document_scores(train_data, datum, 100)
+        top_k_scores = self.compute_document_scores(train_data, datum, self.candidate_count)
         for index in top_k_scores:
             candidate_data.append((index, train_data[index]))
 

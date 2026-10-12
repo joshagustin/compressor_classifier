@@ -10,7 +10,8 @@ class GenerateReport:
         times: list,
         dataset: str,
         directory: str,
-        k: int
+        k: int,
+        candidate_count: int
     ):
         self.labels = labels
         self.predictions = predictions
@@ -18,6 +19,7 @@ class GenerateReport:
         self.dataset = dataset
         self.directory = directory
         self.k = k
+        self.candidate_count = candidate_count
         self.classes = sorted(set(self.labels) | set(self.predictions))
         self.create_metrics_report()
         
@@ -110,6 +112,7 @@ class GenerateReport:
         print(f"{'total avg time':>{name_width}}  {'':>9}  {'':>9}  {times[2]:>9.5f}")
         print(f"{'runs':>{name_width}}  {'':>9}  {'':>9}  {runs:>9}")
         print(f"{'k':>{name_width}}  {'':>9}  {'':>9}  {self.k:>9}")
+        print(f"{'hits':>{name_width}}  {'':>9}  {'':>9}  {self.candidate_count:>9}")
         print(f"{'dataset':>{name_width}}  {'':>9}  {'':>9}  {self.dataset:>9}")
 
 
@@ -123,7 +126,7 @@ class GenerateReport:
         runs: int,
     ):
         path = os.path.join(self.directory, self.dataset)
-        with open(f"{path}.csv", "w", newline="") as f:
+        with open(f"{path}_{self.candidate_count}_{self.k}.csv", "w", newline="") as f:
             writer = csv.writer(f)
             writer.writerow(["", "precision", "recall", "f1-score"])
 
@@ -142,6 +145,7 @@ class GenerateReport:
             writer.writerow(["total avg time", f"{times[2]:.5f}"])
             writer.writerow(["runs", runs])
             writer.writerow(["k", self.k])
+            writer.writerow(["hits", self.candidate_count])
             writer.writerow(["dataset", self.dataset])
 
 if __name__ == "__main__":

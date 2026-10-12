@@ -31,6 +31,7 @@ def non_neural_knn_exp(
     agg_func: Callable,
     dis_func: Callable,
     k: int,
+    candidate_count: int,
     para: bool = True,
 ):
     pre_start = time.time()
@@ -41,7 +42,7 @@ def non_neural_knn_exp(
     exp_start = time.time()
     print("KNN with compressor={}".format(compressor_name))
     cp = DefaultCompressor(compressor_name)
-    knn_exp_ins = KnnExpText(agg_func, cp, dis_func, train_data)
+    knn_exp_ins = KnnExpText(agg_func, cp, dis_func, train_data, candidate_count)
     
     if para:
         with Pool(8) as p:
@@ -123,9 +124,9 @@ if __name__ == "__main__":
     parser.add_argument("--num_test", type=int, default=100)
     parser.add_argument("--num_train", type=int, default=100)
     parser.add_argument("--compressor", default="gzip")
-    parser.add_argument("--all_test", action="store_true", default=False)
-    parser.add_argument("--all_train", action="store_true", default=False)
-    parser.add_argument("--para", action="store_true", default=False)
+    parser.add_argument("--all_test", action="store_true", default=True)
+    parser.add_argument("--all_train", action="store_true", default=True)
+    parser.add_argument("--para", action="store_true", default=True)
     parser.add_argument(
         "--record",
         action="store_true",
@@ -143,6 +144,7 @@ if __name__ == "__main__":
     parser.add_argument("--random", action="store_true", default=False)
     parser.add_argument("--runs", type=int, default=1)
     parser.add_argument("--report_dir", type=str, default=None)
+    parser.add_argument("--candidate_count", type=int, default=100)
     args = parser.parse_args()
     # create output dir
     if not os.path.exists(args.output_dir):
@@ -268,6 +270,7 @@ if __name__ == "__main__":
                 agg_by_concat_space,
                 NCD,
                 args.k,
+                args.candidate_count,
                 para=args.para,
             )
             times.append(runtime)
@@ -277,7 +280,8 @@ if __name__ == "__main__":
             times, 
             args.dataset,
             args.report_dir,
-            args.k
+            args.k,
+            args.candidate_count
         )
     else:
         if not args.score:
