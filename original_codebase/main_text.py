@@ -33,6 +33,7 @@ def non_neural_knn_exp(
     k: int,
     candidate_count: int,
     para: bool = True,
+    cos_sim: bool = False,
 ):
     pre_start = time.time()
     train_data = preprocess(train_data)
@@ -44,24 +45,28 @@ def non_neural_knn_exp(
     cp = DefaultCompressor(compressor_name)
     knn_exp_ins = KnnExpText(agg_func, cp, dis_func, train_data, candidate_count)
     
-    if para:
+    if para and not cos_sim:
         with Pool(8) as p:
             pred_correct_pair = p.map(
                 partial(knn_exp_ins.combine_dis_acc_single, k, train_data, train_label),
                 test_data,
                 test_label,
             )
-        pred_correct_pair = np.array(pred_correct_pair, dtype=np.int32)
-        print(
-            "\naccuracy:{}".format(
-                np.average(pred_correct_pair[:, 1])
+    elif para and cos_sim:
+        with Pool(8) as p:
+            pred_correct_pair = p.map(
+                partial(knn_exp_ins.combine_cos_sim_acc_single, k, train_data, train_label),
+                test_data,
+                test_label,
             )
-        )
-        print(f"\naverage hits: {np.average(pred_correct_pair[:,2])}")
-        print(f"training rows: {len(train_data)}\n")
     else:
         knn_exp_ins.calc_dis(test_data, train_data=train_data)
         knn_exp_ins.calc_acc(k, test_label, train_label=train_label)
+
+    pred_correct_pair = np.array(pred_correct_pair, dtype=np.int32)
+    print("\naccuracy:{}".format(np.average(pred_correct_pair[:, 1])))
+    print(f"\naverage hits: {np.average(pred_correct_pair[:,2])}")
+    print(f"training rows: {len(train_data)}\n")
 
     exp_duration = time.time() - exp_start
     print(f"preprocessing time: {pre_duration}")
@@ -145,6 +150,7 @@ if __name__ == "__main__":
     parser.add_argument("--runs", type=int, default=1)
     parser.add_argument("--report_dir", type=str, default=None)
     parser.add_argument("--candidate_count", type=int, default=100)
+    parser.add_argument("--cos_sim", action="store_true", default=False)
     args = parser.parse_args()
     # create output dir
     if not os.path.exists(args.output_dir):
@@ -271,7 +277,8 @@ if __name__ == "__main__":
                 NCD,
                 args.k,
                 args.candidate_count,
-                para=args.para,
+                args.para,
+                args.cos_sim
             )
             times.append(runtime)
         report_ins = GenerateReport(

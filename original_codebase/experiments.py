@@ -454,6 +454,8 @@ class KnnExpText:
         Calculates the distance and the accuracy of the algorithm for a single
         datum with training.
 
+        * cosine similarity -> NCD -> kNN
+
         Arguments:
             k (int?): TODO
             train_data (list): Training data to compare distances.
@@ -473,6 +475,55 @@ class KnnExpText:
         pred_labels = defaultdict(int)
         for j in range(k):
             pred_l = train_label[sorted_indices[j]]
+            pred_labels[pred_l] += 1
+        sorted_pred_lab = sorted(
+            pred_labels.items(), key=operator.itemgetter(1), reverse=True
+        )
+        most_count = sorted_pred_lab[0][1]
+        most_label = sorted_pred_lab[0][0]
+        
+        # kNN classifier based on a plurality vote. If there exists a counting
+        # tie (e.g. 1-1-1 for k=3), it considers the closest neighbor based on NCD.
+        # If there are ties in NCD, it considers which label appears first in the
+        # training data.
+        if_right = 0
+        if most_label == label:
+            if_right = 1
+
+        pred = most_label
+        correct = if_right
+        return pred, correct, hits
+
+
+    def combine_cos_sim_acc_single(
+        self,
+        k: int,
+        train_data: list,
+        train_label: list,
+        datum: str,
+        label: Any,  # int, as used in this application
+    ) -> tuple:
+        """
+        Calculates the distance and the accuracy of the algorithm for a single
+        datum with training.
+
+        * cosine similarity -> kNN
+        
+        Arguments:
+            k (int?): TODOc
+            train_data (list): Training data to compare distances.
+            train_label (list): Correct Labels.
+            datum (str): Datum used for predictions.
+            label (Any): Correct label of datum.
+
+        Returns:
+            tuple: prediction, and a bool indicating prediction correctness.
+        """
+        
+        candidate_data, hits = self.filter_candidates(train_data, datum)
+        pred_labels = defaultdict(int)
+        for j in range(k):
+            pred_l = train_label[candidate_data[j][0]]
             pred_labels[pred_l] += 1
         sorted_pred_lab = sorted(
             pred_labels.items(), key=operator.itemgetter(1), reverse=True
