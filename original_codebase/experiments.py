@@ -453,8 +453,9 @@ class KnnExpText:
         train_label: list,
         test_point: tuple,
         *,
-        cos_sim=False, 
-        ncd=False
+        cos_sim: bool,
+        ncd: bool,
+        oracle: bool,
     ) -> tuple:
         """
         Calculates the distance and the accuracy of the algorithm for a single
@@ -475,6 +476,9 @@ class KnnExpText:
             idx, hits = self._neighbors_cos_ncd(k, train_data, datum)
         elif cos_sim:
             idx, hits = self._neighbors_cos(k, train_data, datum)
+        elif oracle:
+            pred, correct, hits = self._oracle(k, train_data, datum, train_label, label)
+            return pred, correct, hits
         else:
             idx, hits = self._neighbors_ncd(k, train_data, datum)
         pred, correct = self._vote(k, train_label, idx, label)
@@ -497,6 +501,22 @@ class KnnExpText:
         distance4i = np.asarray(self.calc_dis_single_multi(train_data, datum))
         sorted_idx = np.argpartition(distance4i, range(min(k, len(distance4i))))
         return list(sorted_idx[:k]), self.document_count
+
+    def _oracle(self, k: int, train_data: list, datum: str, train_label: list, label: Any):
+        # * cosine similarity -> NCD -> kNN
+        cos_candidates, hits = self.filter_candidates(train_data, datum)
+        distance4i = np.asarray(self.calc_dis_single_multi(cos_candidates, datum, indexed_train=True))
+        sorted_idx = np.argpartition(distance4i, range(min(k, len(distance4i))))
+        cos_ncd_candidates = [cos_candidates[idx][0] for idx in sorted_idx[:k]]
+
+        cos_candidates = [c[0] for c in cos_candidates[:k]]
+        pred_cos, correct_cos = self._vote(k, train_label, cos_candidates, label)
+
+        if not correct_cos:
+            pred_cos_ncd, correct_cos_ncd = self._vote(k, train_label, cos_ncd_candidates, label)
+            return pred_cos_ncd, correct_cos_ncd, hits
+
+        return pred_cos, correct_cos, hits
 
     def _vote(
         self,

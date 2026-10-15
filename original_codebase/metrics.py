@@ -39,9 +39,10 @@ class GenerateReport:
         times = np.array(self.times)
         runs = len(times)
         pre_avg_time = times[:,0].mean()
-        exp_avg_time = times[:,1].mean()
-        total_avg_time = pre_avg_time + exp_avg_time
-        avg_times = [pre_avg_time, exp_avg_time, total_avg_time]
+        index_avg_time = times[:,1].mean()
+        exp_avg_time = times[:,2].mean()
+        total_avg_time = pre_avg_time + index_avg_time + exp_avg_time
+        avg_times = [pre_avg_time, index_avg_time, exp_avg_time, total_avg_time]
 
         self._print_report(
             precision_vec,
@@ -93,7 +94,7 @@ class GenerateReport:
         times: list,
         runs: int,
     ):
-        name_width = max(len(str(c)) for c in self.classes + ["preprocessing avg time"])
+        name_width = max(len(str(c)) for c in self.classes + ["index creation avg time"])
         header = f"{'':>{name_width}}  {'precision':>9}  {'recall':>9}  {'f1-score':>9}"
         print(header)
         print()
@@ -108,8 +109,9 @@ class GenerateReport:
             f"{precision_vec.mean():>9.5f}  {recall_vec.mean():>9.5f}  {f1_vec.mean():>9.5f}"
         )
         print(f"{'preprocessing avg time':>{name_width}}  {'':>9}  {'':>9}  {times[0]:>9.5f}")
-        print(f"{'experiment avg time':>{name_width}}  {'':>9}  {'':>9}  {times[1]:>9.5f}")
-        print(f"{'total avg time':>{name_width}}  {'':>9}  {'':>9}  {times[2]:>9.5f}")
+        print(f"{'index creation avg time':>{name_width}}  {'':>9}  {'':>9}  {times[1]:>9.5f}")
+        print(f"{'experiment avg time':>{name_width}}  {'':>9}  {'':>9}  {times[2]:>9.5f}")
+        print(f"{'total avg time':>{name_width}}  {'':>9}  {'':>9}  {times[3]:>9.5f}")
         print(f"{'runs':>{name_width}}  {'':>9}  {'':>9}  {runs:>9}")
         print(f"{'k':>{name_width}}  {'':>9}  {'':>9}  {self.k:>9}")
         print(f"{'hits':>{name_width}}  {'':>9}  {'':>9}  {self.candidate_count:>9}")
@@ -141,8 +143,9 @@ class GenerateReport:
                 f"{f1_vec.mean():.5f}",
             ])
             writer.writerow(["preprocessing avg time", f"{times[0]:.5f}"])
-            writer.writerow(["experiment avg time", f"{times[1]:.5f}"])
-            writer.writerow(["total avg time", f"{times[2]:.5f}"])
+            writer.writerow(["index creation avg time", f"{times[1]:.5f}"])
+            writer.writerow(["experiment avg time", f"{times[2]:.5f}"])
+            writer.writerow(["total avg time", f"{times[3]:.5f}"])
             writer.writerow(["runs", runs])
             writer.writerow(["k", self.k])
             writer.writerow(["hits", self.candidate_count])

@@ -30,22 +30,25 @@ def non_neural_knn_exp(
     train_label: list,
     agg_func: Callable,
     dis_func: Callable,
-    k: int,
-    candidate_count: int,
+    k: int = 1,
+    candidate_count: int = 100,
     para: bool = True,
     cos_sim: bool = False,
-    ncd: bool = False
+    ncd: bool = False,
+    oracle: bool = False
 ):
     pre_start = time.time()
     train_data = preprocess(train_data)
     test_data = preprocess(test_data)
     pre_duration = time.time() - pre_start
 
-    exp_start = time.time()
     print("KNN with compressor={}".format(compressor_name))
     cp = DefaultCompressor(compressor_name)
+    index_start = time.time()
     knn_exp_ins = KnnExpText(agg_func, cp, dis_func, train_data, candidate_count)
-    
+    index_duration = time.time() - index_start
+
+    exp_start = time.time()
     if para:
         fn = partial(
                 knn_exp_ins.predict_single,
@@ -53,28 +56,30 @@ def non_neural_knn_exp(
                 train_data,
                 train_label,
                 cos_sim=cos_sim,
-                ncd=ncd
+                ncd=ncd,
+                oracle=oracle
             )
         with Pool(8) as p:
             pred_correct_pair = p.map(fn, zip(test_data, test_label))
     else:
         knn_exp_ins.calc_dis(test_data, train_data=train_data)
         knn_exp_ins.calc_acc(k, test_label, train_label=train_label)
+    exp_duration = time.time() - exp_start
 
     pred_correct_pair = np.array(pred_correct_pair, dtype=np.int32)
     print("\naccuracy:{}".format(np.average(pred_correct_pair[:, 1])))
     print(f"\naverage hits: {np.average(pred_correct_pair[:,2])}")
     print(f"training rows: {len(train_data)}\n")
 
-    exp_duration = time.time() - exp_start
     print(f"preprocessing time: {pre_duration}")
     print(f"experiment time: {exp_duration}")
     print(f"total time: {pre_duration + exp_duration}\n")
 
     pred_labels = list(pred_correct_pair[:, 0])
-    times = [pre_duration, exp_duration]
+    hits = int(np.mean(pred_correct_pair[:, 2]))
+    times = [pre_duration, index_duration, exp_duration]
     
-    return test_label, pred_labels, times
+    return test_label, pred_labels, times, hits
 
 
 def record_distance(
@@ -142,14 +147,15 @@ if __name__ == "__main__":
     parser.add_argument("--test_idx_end", type=int, default=None)
     parser.add_argument("--distance_fn", default=None)
     parser.add_argument("--score", action="store_true", default=False)
-    parser.add_argument("--k", default=1, type=int)
+    parser.add_argument("--k", type=int)
     parser.add_argument("--class_num", default=5, type=int)
     parser.add_argument("--random", action="store_true", default=False)
     parser.add_argument("--runs", type=int, default=1)
     parser.add_argument("--report_dir", type=str, default=None)
     parser.add_argument("--candidate_count", type=int, default=100)
-    parser.add_argument("--cos_sim", action="store_true", default=False)
-    parser.add_argument("--ncd", action="store_true", default=False)
+    parser.add_argument("--cos_sim", action="store_true")
+    parser.add_argument("--ncd", action="store_true")
+    parser.add_argument("--oracle", action="store_true")
     args = parser.parse_args()
     # create output dir
     if not os.path.exists(args.output_dir):
@@ -263,10 +269,8 @@ if __name__ == "__main__":
         )
     if not args.record:
         times = []
-        lab = None
-        pred = None
         for i in range(args.runs):
-            lab, pred, runtime = non_neural_knn_exp(
+            lab, pred, runtime, hits = non_neural_knn_exp(
                 args.compressor,
                 test_data,
                 test_labels,
@@ -278,7 +282,8 @@ if __name__ == "__main__":
                 args.candidate_count,
                 args.para,
                 args.cos_sim,
-                args.ncd
+                args.ncd,
+                args.oracle
             )
             times.append(runtime)
         report_ins = GenerateReport(
@@ -288,7 +293,7 @@ if __name__ == "__main__":
             args.dataset,
             args.report_dir,
             args.k,
-            args.candidate_count
+            hits
         )
     else:
         if not args.score:

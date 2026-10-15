@@ -9,15 +9,14 @@
             "program": "${workspaceFolder}/original_codebase/main_text.py",
             "console": "integratedTerminal",
             "args": [
-                "--all_train",
-                "--all_test",
-                "--para",
                 "--dataset",
                 "Ohsumed",
                 "--data_dir",
                 "data/datasets/Ohsumed",
                 "--k",
-                "5"
+                "5",
+                "--ncd",
+                "--cos_sim"
             ]
         }
     ]
