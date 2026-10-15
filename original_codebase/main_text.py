@@ -46,27 +46,17 @@ def non_neural_knn_exp(
     cp = DefaultCompressor(compressor_name)
     knn_exp_ins = KnnExpText(agg_func, cp, dis_func, train_data, candidate_count)
     
-    if para and cos_sim and ncd:
-        with Pool(8) as p:
-            pred_correct_pair = p.map(
-                partial(knn_exp_ins.combine_dis_acc_single, k, train_data, train_label),
-                test_data,
-                test_label,
+    if para:
+        fn = partial(
+                knn_exp_ins.predict_single,
+                k,
+                train_data,
+                train_label,
+                cos_sim=cos_sim,
+                ncd=ncd
             )
-    elif para and cos_sim:
         with Pool(8) as p:
-            pred_correct_pair = p.map(
-                partial(knn_exp_ins.combine_cos_sim_acc_single, k, train_data, train_label),
-                test_data,
-                test_label,
-            )
-    elif para and ncd:
-        with Pool(8) as p:
-            pred_correct_pair = p.map(
-                partial(knn_exp_ins.combine_ncd_acc_single, k, train_data, train_label),
-                test_data,
-                test_label,
-            )
+            pred_correct_pair = p.map(fn, zip(test_data, test_label))
     else:
         knn_exp_ins.calc_dis(test_data, train_data=train_data)
         knn_exp_ins.calc_acc(k, test_label, train_label=train_label)
