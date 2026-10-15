@@ -182,7 +182,7 @@ class KnnExpText:
         distance = self.distance_func(t1_compressed, t2_compressed, t1t2_compressed)
         return distance
 
-    def calc_dis_single_multi(self, train_data: list, datum: str) -> list:
+    def calc_dis_single_multi(self, train_data: list, datum: str, indexed_train: bool = False) -> list:
         """
         Calculates the distance between `train_data` and `datum` and returns
         that distance value as a float-like object.
@@ -198,9 +198,12 @@ class KnnExpText:
         distance4i = []
         t1_compressed = self.compressor.get_compressed_len(datum)
         for j, t2 in tqdm(enumerate(train_data)):
-            t2_compressed = self.compressor.get_compressed_len(t2[1])
+            if indexed_train:
+                t2 = t2[1]
+
+            t2_compressed = self.compressor.get_compressed_len(t2)
             t1t2_compressed = self.compressor.get_compressed_len(
-                self.aggregation_func(datum, t2[1])
+                self.aggregation_func(datum, t2)
             )
             distance = self.distance_func(t1_compressed, t2_compressed, t1t2_compressed)
             distance4i.append(distance)
@@ -469,7 +472,7 @@ class KnnExpText:
         
         candidate_data, hits = self.filter_candidates(train_data, datum)
         # Support multi processing - must provide train data and train label
-        distance4i = self.calc_dis_single_multi(candidate_data, datum)
+        distance4i = self.calc_dis_single_multi(candidate_data, datum, indexed_train=True)
         sorted_idx = np.argpartition(np.array(distance4i), range(k))
         sorted_indices = [candidate_data[idx][0] for idx in sorted_idx]
         pred_labels = defaultdict(int)
@@ -541,4 +544,55 @@ class KnnExpText:
 
         pred = most_label
         correct = if_right
+        return pred, correct, hits
+
+    def combine_ncd_acc_single(
+        self,
+        k: int,
+        train_data: list,
+        train_label: list,
+        datum: str,
+        label: Any,  # int, as used in this application
+    ) -> tuple:
+        """
+        Calculates the distance and the accuracy of the algorithm for a single
+        datum with training.
+
+        * NCD -> kNN
+
+        Arguments:
+            k (int?): TODO
+            train_data (list): Training data to compare distances.
+            train_label (list): Correct Labels.
+            datum (str): Datum used for predictions.
+            label (Any): Correct label of datum.
+
+        Returns:
+            tuple: prediction, and a bool indicating prediction correctness.
+        """
+        
+        # Support multi processing - must provide train data and train label
+        distance4i = self.calc_dis_single_multi(train_data, datum)
+        sorted_idx = np.argpartition(np.array(distance4i), range(k))
+        pred_labels = defaultdict(int)
+        for j in range(k):
+            pred_l = train_label[sorted_idx[j]]
+            pred_labels[pred_l] += 1
+        sorted_pred_lab = sorted(
+            pred_labels.items(), key=operator.itemgetter(1), reverse=True
+        )
+        most_count = sorted_pred_lab[0][1]
+        most_label = sorted_pred_lab[0][0]
+        
+        # kNN classifier based on a plurality vote. If there exists a counting
+        # tie (e.g. 1-1-1 for k=3), it considers the closest neighbor based on NCD.
+        # If there are ties in NCD, it considers which label appears first in the
+        # training data.
+        if_right = 0
+        if most_label == label:
+            if_right = 1
+
+        pred = most_label
+        correct = if_right
+        hits = self.document_count
         return pred, correct, hits

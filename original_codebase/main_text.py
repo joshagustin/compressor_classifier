@@ -34,6 +34,7 @@ def non_neural_knn_exp(
     candidate_count: int,
     para: bool = True,
     cos_sim: bool = False,
+    ncd: bool = False
 ):
     pre_start = time.time()
     train_data = preprocess(train_data)
@@ -45,7 +46,7 @@ def non_neural_knn_exp(
     cp = DefaultCompressor(compressor_name)
     knn_exp_ins = KnnExpText(agg_func, cp, dis_func, train_data, candidate_count)
     
-    if para and not cos_sim:
+    if para and cos_sim and ncd:
         with Pool(8) as p:
             pred_correct_pair = p.map(
                 partial(knn_exp_ins.combine_dis_acc_single, k, train_data, train_label),
@@ -56,6 +57,13 @@ def non_neural_knn_exp(
         with Pool(8) as p:
             pred_correct_pair = p.map(
                 partial(knn_exp_ins.combine_cos_sim_acc_single, k, train_data, train_label),
+                test_data,
+                test_label,
+            )
+    elif para and ncd:
+        with Pool(8) as p:
+            pred_correct_pair = p.map(
+                partial(knn_exp_ins.combine_ncd_acc_single, k, train_data, train_label),
                 test_data,
                 test_label,
             )
@@ -151,6 +159,7 @@ if __name__ == "__main__":
     parser.add_argument("--report_dir", type=str, default=None)
     parser.add_argument("--candidate_count", type=int, default=100)
     parser.add_argument("--cos_sim", action="store_true", default=False)
+    parser.add_argument("--ncd", action="store_true", default=False)
     args = parser.parse_args()
     # create output dir
     if not os.path.exists(args.output_dir):
@@ -278,7 +287,8 @@ if __name__ == "__main__":
                 args.k,
                 args.candidate_count,
                 args.para,
-                args.cos_sim
+                args.cos_sim,
+                args.ncd
             )
             times.append(runtime)
         report_ins = GenerateReport(
