@@ -546,3 +546,33 @@ class KnnExpText:
         pred = most_label
         correct = if_right
         return pred, correct
+
+    def neighbors_cos_accuracy(
+        self, 
+        train_data: list,
+        train_label: list,
+        test_point: tuple
+        ):
+        """
+        Computes the accuracy of cosine similarity for the nearest `candidate_count`
+        training data. This returns the percentage of `candidate_count` that share
+        the same class as `label`.
+
+        Arguments:
+            train_data (list): Training data to compare distances.
+            train_label (list): Correct Labels.
+            test_point (tuple):
+                datum (str): Datum used for predictions.
+                label (Any): Correct label of datum.
+
+        Returns:
+            float: Accuracy for the given test point
+        """
+
+        datum, label = test_point
+        candidates, _ = self.filter_candidates(train_data, datum)
+        idx = [c[0] for c in candidates]
+
+        correct_vec = np.array([int(train_label[i] == label) for i in idx])
+        return correct_vec.mean()
+

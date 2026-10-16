@@ -13,8 +13,6 @@
                 "Ohsumed",
                 "--data_dir",
                 "data/datasets/Ohsumed",
-                "--k",
-                "5",
                 "--ncd",
                 "--cos_sim"
             ]

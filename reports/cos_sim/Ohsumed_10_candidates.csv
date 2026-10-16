@@ -1,0 +1,5 @@
+dataset,Ohsumed
+train rows,3357
+test rows,4043
+candidate count,10
+average cos sim accuracy,0.4151867

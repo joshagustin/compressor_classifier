@@ -2,6 +2,53 @@ import numpy as np
 import csv
 import os
 
+
+class CandidatesReport:
+    def __init__(
+        self,
+        directory: str,
+        dataset: str,
+        train_rows: int,
+        test_rows: int,
+        candidate_count: int,
+        average_cos_sim_precision: float
+    ):
+        self.directory = directory
+        self.dataset = dataset
+        self.train_rows = train_rows
+        self.test_rows = test_rows
+        self.candidate_count = candidate_count
+        self.average_cos_sim_precision = average_cos_sim_precision
+        self.create_candidates_report()
+
+    def create_candidates_report(self):
+        self._print_candidates_report()
+        self._save_candidates_report()
+
+    def _get_report_rows(self):
+        return [
+            ["dataset", self.dataset],
+            ["train rows", self.train_rows],
+            ["test rows", self.test_rows],
+            ["candidate count", self.candidate_count],
+            ["average cos sim accuracy", self.average_cos_sim_precision],
+        ]
+
+    def _save_candidates_report(self):
+        path = os.path.join(
+            self.directory,
+            f"{self.dataset}_{self.candidate_count}_candidates.csv"
+        )
+
+        with open(path, "w", newline="") as f:
+            writer = csv.writer(f)
+            writer.writerows(self._get_report_rows())
+
+    def _print_candidates_report(self):
+        for label, value in self._get_report_rows():
+            print(f"{label}: {value}")
+
+
 class GenerateReport:
     def __init__(
         self, 

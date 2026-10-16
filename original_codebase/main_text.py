@@ -30,12 +30,12 @@ def non_neural_knn_exp(
     train_label: list,
     agg_func: Callable,
     dis_func: Callable,
-    k: int = 1,
-    candidate_count: int = 100,
-    para: bool = True,
-    cos_sim: bool = False,
-    ncd: bool = False,
-    oracle: bool = False
+    k: int,
+    candidate_count: int,
+    para: bool,
+    cos_sim: bool,
+    ncd: bool,
+    oracle: bool
 ):
     pre_start = time.time()
     train_data = preprocess(train_data)
@@ -81,6 +81,35 @@ def non_neural_knn_exp(
     
     return test_label, pred_labels, times, hits
 
+
+def candidates_exp(
+    compressor_name: str,
+    test_data: list,
+    test_label: list,
+    train_data: list,
+    train_label: list,
+    agg_func: Callable,
+    dis_func: Callable,
+    candidate_count: int,
+    para: bool,
+):
+    train_data = preprocess(train_data)
+    test_data = preprocess(test_data)
+
+    cp = DefaultCompressor(compressor_name)
+    knn_exp_ins = KnnExpText(agg_func, cp, dis_func, train_data, candidate_count)
+
+    if para:
+        fn = partial(
+                knn_exp_ins.neighbors_cos_accuracy,
+                train_data,
+                train_label,
+            )
+        with Pool(8) as p:
+            precision_vec = p.map(fn, zip(test_data, test_label))
+
+    precision_vec = np.array(precision_vec, dtype=np.float32)
+    return precision_vec.mean()
 
 def record_distance(
     compressor_name,
@@ -147,7 +176,7 @@ if __name__ == "__main__":
     parser.add_argument("--test_idx_end", type=int, default=None)
     parser.add_argument("--distance_fn", default=None)
     parser.add_argument("--score", action="store_true", default=False)
-    parser.add_argument("--k", type=int)
+    parser.add_argument("--k", type=int, default=1)
     parser.add_argument("--class_num", default=5, type=int)
     parser.add_argument("--random", action="store_true", default=False)
     parser.add_argument("--runs", type=int, default=1)
@@ -156,6 +185,7 @@ if __name__ == "__main__":
     parser.add_argument("--cos_sim", action="store_true")
     parser.add_argument("--ncd", action="store_true")
     parser.add_argument("--oracle", action="store_true")
+    parser.add_argument("--examine_candidates", action="store_true")
     args = parser.parse_args()
     # create output dir
     if not os.path.exists(args.output_dir):
@@ -267,7 +297,28 @@ if __name__ == "__main__":
         train_data, train_labels = read_torch_text_labels(
             train_pair, range(len(train_pair))
         )
-    if not args.record:
+    if args.examine_candidates:
+        precision_mean = candidates_exp(
+            args.compressor,
+            test_data,
+            test_labels,
+            train_data,
+            train_labels,
+            agg_by_concat_space,
+            NCD,
+            args.candidate_count,
+            args.para,
+        )
+        CandidatesReport(
+            args.report_dir,
+            args.dataset,
+            len(train_labels),
+            len(test_labels),
+            args.candidate_count,
+            precision_mean
+        )
+        
+    if not args.record and not args.examine_candidates:
         times = []
         for i in range(args.runs):
             lab, pred, runtime, hits = non_neural_knn_exp(
@@ -295,7 +346,7 @@ if __name__ == "__main__":
             args.k,
             hits
         )
-    else:
+    if args.record:
         if not args.score:
             if args.test_idx_start is None:
                 start_idx = 0
