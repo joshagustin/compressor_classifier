@@ -552,7 +552,7 @@ class KnnExpText:
         train_data: list,
         train_label: list,
         test_point: tuple
-        ):
+    ):
         """
         Computes the accuracy of cosine similarity for the nearest `candidate_count`
         training data. This returns the percentage of `candidate_count` that share
@@ -576,3 +576,17 @@ class KnnExpText:
         correct_vec = np.array([int(train_label[i] == label) for i in idx])
         return correct_vec.mean()
 
+    def compare_cos_ncd_neighbors(
+        self, 
+        train_data: list,
+        test_point: tuple
+    ):
+        datum, _ = test_point
+        distance4i = np.asarray(self.calc_dis_single_multi(train_data, datum))
+        ncd_idx = set(np.argpartition(distance4i, range(self.candidate_count))[:self.candidate_count])
+
+        candidates, _ = self.filter_candidates(train_data, datum)
+        cos_idx = set([c[0] for c in candidates])
+
+        idx_intersection_ratio = len(ncd_idx & cos_idx) / self.candidate_count
+        return idx_intersection_ratio

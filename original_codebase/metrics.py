@@ -11,14 +11,17 @@ class CandidatesReport:
         train_rows: int,
         test_rows: int,
         candidate_count: int,
-        average_cos_sim_precision: float
+        examine_candidates: int,
+        *,
+        mean: float,
     ):
         self.directory = directory
         self.dataset = dataset
         self.train_rows = train_rows
         self.test_rows = test_rows
         self.candidate_count = candidate_count
-        self.average_cos_sim_precision = average_cos_sim_precision
+        self.examine_candidates = examine_candidates
+        self.mean = mean
         self.create_candidates_report()
 
     def create_candidates_report(self):
@@ -26,18 +29,31 @@ class CandidatesReport:
         self._save_candidates_report()
 
     def _get_report_rows(self):
+        if self.examine_candidates == 0:
+            mean_value = "cos sim accuracy"
+        else:
+            mean_value = "intersection ratio"
+
         return [
             ["dataset", self.dataset],
             ["train rows", self.train_rows],
             ["test rows", self.test_rows],
             ["candidate count", self.candidate_count],
-            ["average cos sim accuracy", self.average_cos_sim_precision],
+            [f"average {mean_value}", self.mean],
         ]
 
     def _save_candidates_report(self):
+        if self.directory is None:
+            return
+        
+        if self.examine_candidates == 0:
+            mean_value = "accuracy"
+        else:
+            mean_value = "ratio"
+        
         path = os.path.join(
             self.directory,
-            f"{self.dataset}_{self.candidate_count}_candidates.csv"
+            f"{self.dataset}_{self.candidate_count}_candidates_{mean_value}.csv"
         )
 
         with open(path, "w", newline="") as f:

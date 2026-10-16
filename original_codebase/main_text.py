@@ -92,6 +92,8 @@ def candidates_exp(
     dis_func: Callable,
     candidate_count: int,
     para: bool,
+    *,
+    examine_candidates: int
 ):
     train_data = preprocess(train_data)
     test_data = preprocess(test_data)
@@ -99,17 +101,30 @@ def candidates_exp(
     cp = DefaultCompressor(compressor_name)
     knn_exp_ins = KnnExpText(agg_func, cp, dis_func, train_data, candidate_count)
 
-    if para:
+    if examine_candidates == 0:
         fn = partial(
                 knn_exp_ins.neighbors_cos_accuracy,
                 train_data,
                 train_label,
             )
         with Pool(8) as p:
-            precision_vec = p.map(fn, zip(test_data, test_label))
+            accuracy_vec = p.map(fn, zip(test_data, test_label))
 
-    precision_vec = np.array(precision_vec, dtype=np.float32)
-    return precision_vec.mean()
+        accuracy_vec = np.array(accuracy_vec, dtype=np.float32)
+        return accuracy_vec.mean()
+    elif examine_candidates == 1:
+        fn = partial(
+                knn_exp_ins.compare_cos_ncd_neighbors,
+                train_data
+            )
+        with Pool(8) as p:
+            ratio_vec = p.map(fn, zip(test_data, test_label))
+
+        ratio_vec = np.array(ratio_vec, dtype=np.float32)
+        return ratio_vec.mean()
+    else:
+        raise ValueError("Examine candidates accepts only 0 or 1.")
+
 
 def record_distance(
     compressor_name,
@@ -185,7 +200,7 @@ if __name__ == "__main__":
     parser.add_argument("--cos_sim", action="store_true")
     parser.add_argument("--ncd", action="store_true")
     parser.add_argument("--oracle", action="store_true")
-    parser.add_argument("--examine_candidates", action="store_true")
+    parser.add_argument("--examine_candidates", type=int, default=None)
     args = parser.parse_args()
     # create output dir
     if not os.path.exists(args.output_dir):
@@ -297,8 +312,8 @@ if __name__ == "__main__":
         train_data, train_labels = read_torch_text_labels(
             train_pair, range(len(train_pair))
         )
-    if args.examine_candidates:
-        precision_mean = candidates_exp(
+    if isinstance(args.examine_candidates, int):
+        mean = candidates_exp(
             args.compressor,
             test_data,
             test_labels,
@@ -308,6 +323,7 @@ if __name__ == "__main__":
             NCD,
             args.candidate_count,
             args.para,
+            examine_candidates=args.examine_candidates
         )
         CandidatesReport(
             args.report_dir,
@@ -315,10 +331,11 @@ if __name__ == "__main__":
             len(train_labels),
             len(test_labels),
             args.candidate_count,
-            precision_mean
+            args.examine_candidates,
+            mean=mean,
         )
         
-    if not args.record and not args.examine_candidates:
+    if not args.record and not isinstance(args.examine_candidates, int):
         times = []
         for i in range(args.runs):
             lab, pred, runtime, hits = non_neural_knn_exp(
