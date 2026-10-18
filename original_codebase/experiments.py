@@ -19,18 +19,22 @@ class KnnExpText:
         compressor: DefaultCompressor,
         distance_function: Callable,
         data: list,
-        candidate_count: int
+        candidate_count: int,
+        document_count: int,
+        create_index: bool,
     ) -> None:
         self.aggregation_func = aggregation_function
         self.compressor = compressor
         self.distance_func = distance_function
         self.distance_matrix: list = []
-        self.document_count = len(data)
-        self.inverted_index = defaultdict(list)
-        self.euclidean_lengths = defaultdict(float)
+        self.document_count = document_count
         self.candidate_count = candidate_count
-        self.create_inverted_index(data)
-        self.create_euclidean_length_index(data)
+
+        if create_index:
+            self.inverted_index = defaultdict(list)
+            self.euclidean_lengths = defaultdict(float)
+            self.create_inverted_index(data)
+            self.create_euclidean_length_index(data)
 
     def create_inverted_index(self, data: list) -> None:
         """
@@ -364,8 +368,8 @@ class KnnExpText:
             datum (str): Search string.
 
         Returns:
-            candidate_data (list[(int, str)]): Filtered candidates that
-                                              show relevance to `datum`.
+            candidate_data (list[(int, str)]): Filtered candidates (index, text) 
+                                                that show relevance to `datum`.
         """
 
         candidate_data = []
@@ -449,13 +453,14 @@ class KnnExpText:
     def predict_single(
         self,
         k: int,
-        train_data: list,
         train_label: list,
         test_point: tuple,
         *,
         cos_sim: bool,
         ncd: bool,
         oracle: bool,
+        cos_train_data: list,
+        ncd_train_data: list,
     ) -> tuple:
         """
         Calculates the distance and the accuracy of the algorithm for a single
@@ -471,25 +476,53 @@ class KnnExpText:
         Returns:
             tuple: prediction, and a bool indicating prediction correctness.
         """
-        datum, label = test_point
-        if cos_sim and ncd:
-            idx, hits = self._neighbors_cos_ncd(k, train_data, datum)
-        elif cos_sim:
-            idx, hits = self._neighbors_cos(k, train_data, datum)
-        elif oracle:
-            pred, correct, hits = self._oracle(k, train_data, datum, train_label, label)
+        cos_datum, ncd_datum, label = test_point
+
+
+        if oracle:
+            pred, correct, hits = self._oracle(
+                k, 
+                train_label,
+                label,
+                cos_data=cos_train_data,
+                ncd_data=ncd_train_data,
+                cos_datum=cos_datum,
+                ncd_datum=ncd_datum,
+            )
             return pred, correct, hits
+        elif cos_sim and ncd:
+            idx, hits = self._neighbors_cos_ncd(
+                k, 
+                cos_data=cos_train_data,
+                ncd_data=ncd_train_data,
+                cos_datum=cos_datum, 
+                ncd_datum=ncd_datum
+            )
+        elif cos_sim:
+            idx, hits = self._neighbors_cos(k, cos_train_data, cos_datum)
         else:
-            idx, hits = self._neighbors_ncd(k, train_data, datum)
+            idx, hits = self._neighbors_ncd(k, ncd_train_data, ncd_datum)
         pred, correct = self._vote(k, train_label, idx, label)
         return pred, correct, hits
 
-    def _neighbors_cos_ncd(self, k: int, train_data: list, datum: str):
+    def _neighbors_cos_ncd(
+        self, 
+        k: int, 
+        *,
+        cos_data: list,
+        ncd_data: list, 
+        cos_datum: str,
+        ncd_datum: str
+    ):
         # * cosine similarity -> NCD -> kNN
-        candidates, hits = self.filter_candidates(train_data, datum)
-        distance4i = np.asarray(self.calc_dis_single_multi(candidates, datum, indexed_train=True))
+        candidates, hits = self.filter_candidates(cos_data, cos_datum)
+        ncd_candidates = [
+            (candidate[0], ncd_data[candidate[0]])
+            for candidate in candidates
+        ]
+        distance4i = np.asarray(self.calc_dis_single_multi(ncd_candidates, ncd_datum, indexed_train=True))
         sorted_idx = np.argpartition(distance4i, range(min(k, len(distance4i))))
-        return [candidates[idx][0] for idx in sorted_idx[:k]], hits
+        return [ncd_candidates[idx][0] for idx in sorted_idx[:k]], hits
 
     def _neighbors_cos(self, k: int, train_data: list, datum: str):
         # * cosine similarity -> kNN
@@ -502,21 +535,37 @@ class KnnExpText:
         sorted_idx = np.argpartition(distance4i, range(min(k, len(distance4i))))
         return list(sorted_idx[:k]), self.document_count
 
-    def _oracle(self, k: int, train_data: list, datum: str, train_label: list, label: Any):
+    def _oracle(
+        self,
+        k: int,
+        train_label: list,
+        label: Any,
+        *,
+        cos_data: list,
+        ncd_data: list,
+        cos_datum: str,
+        ncd_datum: str,
+    ):
         # * cosine similarity -> NCD -> kNN
-        cos_candidates, hits = self.filter_candidates(train_data, datum)
-        distance4i = np.asarray(self.calc_dis_single_multi(cos_candidates, datum, indexed_train=True))
-        sorted_idx = np.argpartition(distance4i, range(min(k, len(distance4i))))
-        cos_ncd_candidates = [cos_candidates[idx][0] for idx in sorted_idx[:k]]
+        cos_candidates, hits = self.filter_candidates(cos_data, cos_datum)
+        ncd_candidates = [
+            (candidate[0], ncd_data[candidate[0]])
+            for candidate in cos_candidates
+        ]
 
         cos_candidates = [c[0] for c in cos_candidates[:k]]
         pred_cos, correct_cos = self._vote(k, train_label, cos_candidates, label)
 
-        if not correct_cos:
-            pred_cos_ncd, correct_cos_ncd = self._vote(k, train_label, cos_ncd_candidates, label)
-            return pred_cos_ncd, correct_cos_ncd, hits
+        if correct_cos:
+            return pred_cos, correct_cos, hits
 
-        return pred_cos, correct_cos, hits
+        distance4i = np.asarray(self.calc_dis_single_multi(ncd_candidates, ncd_datum, indexed_train=True))
+        sorted_idx = np.argpartition(distance4i, range(min(k, len(distance4i))))
+        cos_ncd_candidates = [ncd_candidates[idx][0] for idx in sorted_idx[:k]]
+
+        pred_cos_ncd, correct_cos_ncd = self._vote(k, train_label, cos_ncd_candidates, label)
+        return pred_cos_ncd, correct_cos_ncd, hits
+        
 
     def _vote(
         self,

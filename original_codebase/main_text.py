@@ -30,10 +30,25 @@ def non_neural_knn_exp(
     experiment_config: ExperimentConfig,
     preprocessing_config: PreprocessingConfig,
 ):
+    cos_train_data = cos_test_data = None
+    ncd_train_data = ncd_test_data = None
+
     pre_start = time.time()
-    train_data = preprocess(train_data, preprocessing_config)
-    test_data = preprocess(test_data, preprocessing_config)
+    if experiment_config.cos_sim or experiment_config.oracle:
+        cos_preprocessing_config = PreprocessingConfig(
+            normalize=True, remove_stopwords=True, stem=True
+        )
+        cos_train_data = preprocess(train_data, cos_preprocessing_config)
+        cos_test_data = preprocess(test_data, cos_preprocessing_config)
+
+    if experiment_config.ncd or experiment_config.oracle:
+        ncd_train_data = preprocess(train_data, preprocessing_config)
+        ncd_test_data = preprocess(test_data, preprocessing_config)
     pre_duration = time.time() - pre_start
+
+    n = len(test_label)
+    cos_test_data = cos_test_data if cos_test_data is not None else [None] * n
+    ncd_test_data = ncd_test_data if ncd_test_data is not None else [None] * n
 
     print("KNN with compressor={}".format(experiment_config.compressor_name))
     cp = DefaultCompressor(experiment_config.compressor_name)
@@ -42,24 +57,27 @@ def non_neural_knn_exp(
         experiment_config.agg_func,
         cp,
         experiment_config.dis_func, 
-        train_data,
-        experiment_config.candidate_count
+        cos_train_data,
+        experiment_config.candidate_count,
+        len(train_data),
+        experiment_config.cos_sim or experiment_config.oracle,
     )
     index_duration = time.time() - index_start
 
     exp_start = time.time()
     if experiment_config.para:
         fn = partial(
-                knn_exp_ins.predict_single,
-                experiment_config.k,
-                train_data,
-                train_label,
-                cos_sim=experiment_config.cos_sim,
-                ncd=experiment_config.ncd,
-                oracle=experiment_config.oracle
-            )
+            knn_exp_ins.predict_single,
+            experiment_config.k,
+            train_label,
+            cos_sim=experiment_config.cos_sim,
+            ncd=experiment_config.ncd,
+            oracle=experiment_config.oracle,
+            cos_train_data=cos_train_data,
+            ncd_train_data=ncd_train_data
+        )
         with Pool(8) as p:
-            pred_correct_pair = p.map(fn, zip(test_data, test_label))
+            pred_correct_pair = p.map(fn, zip(cos_test_data, ncd_test_data, test_label))
     else:
         knn_exp_ins.calc_dis(test_data, train_data=train_data)
         knn_exp_ins.calc_acc(experiment_config.k, test_label, train_label=train_label)
@@ -70,9 +88,7 @@ def non_neural_knn_exp(
     print(f"\naverage hits: {np.average(pred_correct_pair[:,2])}")
     print(f"training rows: {len(train_data)}\n")
 
-    print(f"preprocessing time: {pre_duration}")
-    print(f"experiment time: {exp_duration}")
-    print(f"total time: {pre_duration + exp_duration}\n")
+    print(f"total time: {pre_duration + index_duration + exp_duration}\n")
 
     pred_labels = list(pred_correct_pair[:, 0])
     hits = int(np.mean(pred_correct_pair[:, 2]))
