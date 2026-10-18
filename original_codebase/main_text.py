@@ -1,13 +1,13 @@
 import argparse
 import time
 from functools import partial
-from typing import Callable
 
 from metrics import *
 from preprocess import *
 from compressors import *
 from data import *
 from experiments import *
+from configs import *
 from pathos.multiprocessing import ProcessingPool as Pool
 from torchtext.datasets import (
     AG_NEWS,
@@ -23,47 +23,46 @@ from utils import *
 
 
 def non_neural_knn_exp(
-    compressor_name: str,
     test_data: list,
     test_label: list,
     train_data: list,
     train_label: list,
-    agg_func: Callable,
-    dis_func: Callable,
-    k: int,
-    candidate_count: int,
-    para: bool,
-    cos_sim: bool,
-    ncd: bool,
-    oracle: bool
+    experiment_config: ExperimentConfig,
+    preprocessing_config: PreprocessingConfig,
 ):
     pre_start = time.time()
-    train_data = preprocess(train_data)
-    test_data = preprocess(test_data)
+    train_data = preprocess(train_data, preprocessing_config)
+    test_data = preprocess(test_data, preprocessing_config)
     pre_duration = time.time() - pre_start
 
-    print("KNN with compressor={}".format(compressor_name))
-    cp = DefaultCompressor(compressor_name)
+    print("KNN with compressor={}".format(experiment_config.compressor_name))
+    cp = DefaultCompressor(experiment_config.compressor_name)
     index_start = time.time()
-    knn_exp_ins = KnnExpText(agg_func, cp, dis_func, train_data, candidate_count)
+    knn_exp_ins = KnnExpText(
+        experiment_config.agg_func,
+        cp,
+        experiment_config.dis_func, 
+        train_data,
+        experiment_config.candidate_count
+    )
     index_duration = time.time() - index_start
 
     exp_start = time.time()
-    if para:
+    if experiment_config.para:
         fn = partial(
                 knn_exp_ins.predict_single,
-                k,
+                experiment_config.k,
                 train_data,
                 train_label,
-                cos_sim=cos_sim,
-                ncd=ncd,
-                oracle=oracle
+                cos_sim=experiment_config.cos_sim,
+                ncd=experiment_config.ncd,
+                oracle=experiment_config.oracle
             )
         with Pool(8) as p:
             pred_correct_pair = p.map(fn, zip(test_data, test_label))
     else:
         knn_exp_ins.calc_dis(test_data, train_data=train_data)
-        knn_exp_ins.calc_acc(k, test_label, train_label=train_label)
+        knn_exp_ins.calc_acc(experiment_config.k, test_label, train_label=train_label)
     exp_duration = time.time() - exp_start
 
     pred_correct_pair = np.array(pred_correct_pair, dtype=np.int32)
@@ -83,23 +82,26 @@ def non_neural_knn_exp(
 
 
 def candidates_exp(
-    compressor_name: str,
     test_data: list,
     test_label: list,
     train_data: list,
     train_label: list,
-    agg_func: Callable,
-    dis_func: Callable,
-    candidate_count: int,
-    para: bool,
+    experiment_config: ExperimentConfig,
+    preprocessing_config: PreprocessingConfig,
     *,
     examine_candidates: int
 ):
-    train_data = preprocess(train_data)
-    test_data = preprocess(test_data)
+    train_data = preprocess(train_data, preprocessing_config)
+    test_data = preprocess(test_data, preprocessing_config)
 
-    cp = DefaultCompressor(compressor_name)
-    knn_exp_ins = KnnExpText(agg_func, cp, dis_func, train_data, candidate_count)
+    cp = DefaultCompressor(experiment_config.compressor_name)
+    knn_exp_ins = KnnExpText(
+        experiment_config.agg_func,
+        cp,
+        experiment_config.dis_func, 
+        train_data,
+        experiment_config.candidate_count
+    )
 
     if examine_candidates == 0:
         fn = partial(
@@ -201,6 +203,9 @@ if __name__ == "__main__":
     parser.add_argument("--ncd", action="store_true")
     parser.add_argument("--oracle", action="store_true")
     parser.add_argument("--examine_candidates", type=int, default=None)
+    parser.add_argument("--no_normalize", dest="normalize", action="store_false")
+    parser.add_argument("--no_remove_stopwords", dest="remove_stopwords", action="store_false")
+    parser.add_argument("--no_stem", dest="stem", action="store_false")
     args = parser.parse_args()
     # create output dir
     if not os.path.exists(args.output_dir):
@@ -212,6 +217,22 @@ if __name__ == "__main__":
     test_idx_fn = os.path.join(
         args.output_dir,
         "{}_test_indicies_{}per_class".format(args.dataset, args.num_test),
+    )
+    preprocessing_config = PreprocessingConfig(
+        normalize=args.normalize,
+        remove_stopwords=args.remove_stopwords,
+        stem=args.stem
+    )
+    experiment_config = ExperimentConfig(
+        compressor_name=args.compressor,
+        agg_func=agg_by_concat_space,
+        dis_func=NCD,
+        k=args.k,
+        candidate_count=args.candidate_count,
+        para=args.para,
+        cos_sim=args.cos_sim,
+        ncd=args.ncd,
+        oracle=args.oracle
     )
     # all dataset class number
     ds2classes = {
@@ -314,15 +335,12 @@ if __name__ == "__main__":
         )
     if isinstance(args.examine_candidates, int):
         mean = candidates_exp(
-            args.compressor,
             test_data,
             test_labels,
             train_data,
             train_labels,
-            agg_by_concat_space,
-            NCD,
-            args.candidate_count,
-            args.para,
+            experiment_config,
+            preprocessing_config,
             examine_candidates=args.examine_candidates
         )
         CandidatesReport(
@@ -339,19 +357,12 @@ if __name__ == "__main__":
         times = []
         for i in range(args.runs):
             lab, pred, runtime, hits = non_neural_knn_exp(
-                args.compressor,
                 test_data,
                 test_labels,
                 train_data,
                 train_labels,
-                agg_by_concat_space,
-                NCD,
-                args.k,
-                args.candidate_count,
-                args.para,
-                args.cos_sim,
-                args.ncd,
-                args.oracle
+                experiment_config,
+                preprocessing_config
             )
             times.append(runtime)
         report_ins = GenerateReport(
@@ -361,7 +372,8 @@ if __name__ == "__main__":
             args.dataset,
             args.report_dir,
             args.k,
-            hits
+            hits,
+            preprocessing_config
         )
     if args.record:
         if not args.score:

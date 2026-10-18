@@ -2,32 +2,27 @@ import string
 import nltk.tokenize as tokenizer
 from nltk.corpus import stopwords
 from nltk.stem import SnowballStemmer
+from configs import PreprocessingConfig
 import time
 
 snowball = SnowballStemmer("english")
 
 def preprocess(
     texts: list,
-    tokenize: bool = True,
-    lowercase: bool = True,
-    remove_punctuation: bool = True,
-    remove_stopwords: bool = True,
-    stem: bool = True,
+    config: PreprocessingConfig,
 ):
     start = time.time()
 
-    if tokenize:
+    if config.normalize:
         texts = tokenize_texts(texts)
-    if lowercase:
         texts = lowercase_tokens(texts)
-    if remove_punctuation:
         texts = remove_punctuation_tokens(texts)
-    if remove_stopwords:
-        texts = remove_stopword_tokens(texts)
-    if stem:
-        texts = stem_tokens(texts)
 
-    if tokenize:
+        if config.remove_stopwords:
+            texts = remove_stopword_tokens(texts)
+        if config.stem:
+            texts = stem_tokens(texts)
+
         texts = detokenize(texts)
 
     print(f"preprocessed in: {time.time() - start}")

@@ -1,7 +1,8 @@
 import numpy as np
 import csv
 import os
-
+from configs import PreprocessingConfig
+from dataclasses import fields
 
 class CandidatesReport:
     def __init__(
@@ -74,7 +75,8 @@ class GenerateReport:
         dataset: str,
         directory: str,
         k: int,
-        candidate_count: int
+        candidate_count: int,
+        preprocessing_config: PreprocessingConfig
     ):
         self.labels = labels
         self.predictions = predictions
@@ -83,6 +85,7 @@ class GenerateReport:
         self.directory = directory
         self.k = k
         self.candidate_count = candidate_count
+        self.preprocessing_config = preprocessing_config
         self.classes = sorted(set(self.labels) | set(self.predictions))
         self.create_metrics_report()
         
@@ -107,23 +110,10 @@ class GenerateReport:
         total_avg_time = pre_avg_time + index_avg_time + exp_avg_time
         avg_times = [pre_avg_time, index_avg_time, exp_avg_time, total_avg_time]
 
-        self._print_report(
-            precision_vec,
-            recall_vec,
-            f1_vec,
-            accuracy,
-            avg_times,
-            runs,
-        )
+        report_args = (precision_vec, recall_vec, f1_vec, accuracy, avg_times, runs)
+        self._print_report(*report_args)
         if self.directory is not None:
-            self._save_report_csv(
-                precision_vec,
-                recall_vec,
-                f1_vec,
-                accuracy,
-                avg_times,
-                runs,
-            )
+            self._save_report_csv(*report_args)
         
 
     def create_confusion_matrix(self):
@@ -148,71 +138,75 @@ class GenerateReport:
         return np.divide(num, den, out=np.zeros_like(num, dtype=float), where=den != 0)
 
 
-    def _print_report(
-        self,
-        precision_vec: np.ndarray,
-        recall_vec: np.ndarray,
-        f1_vec: np.ndarray,
-        accuracy,
-        times: list,
-        runs: int,
-    ):
-        name_width = max(len(str(c)) for c in self.classes + ["index creation avg time"])
-        header = f"{'':>{name_width}}  {'precision':>9}  {'recall':>9}  {'f1-score':>9}"
-        print(header)
+    def _build_report(self, precision_vec, recall_vec, f1_vec, accuracy, times, runs):
+        configs = [
+            field.name
+            for field in fields(self.preprocessing_config)
+            if getattr(self.preprocessing_config, field.name)
+        ]
+
+        class_rows = [
+            (str(cls), p, r, f)
+            for cls, p, r, f in zip(self.classes, precision_vec, recall_vec, f1_vec)
+        ]
+        macro_row = ("macro avg", precision_vec.mean(), recall_vec.mean(), f1_vec.mean())
+
+        summary_rows = [
+            ("accuracy", accuracy),
+            ("macro avg", macro_row[1:]),
+            ("preprocessing avg time", times[0]),
+            ("index creation avg time", times[1]),
+            ("experiment avg time", times[2]),
+            ("total avg time", times[3]),
+            ("runs", runs),
+            ("k", self.k),
+            ("candidate count", self.candidate_count),
+            ("preprocessing", ", ".join(configs)),
+            ("dataset", self.dataset),
+        ]
+        return class_rows, summary_rows
+        
+
+    @staticmethod
+    def _fmt(value):
+        return f"{value:.5f}" if isinstance(value, (float, np.floating)) else str(value)
+        
+
+    def _print_report(self, *report_args):
+        class_rows, summary_rows = self._build_report(*report_args)
+
+        labels = [r[0] for r in class_rows] + [r[0] for r in summary_rows]
+        w = max(len(l) for l in labels)
+
+        print(f"{'':>{w}}  {'precision':>9}  {'recall':>9}  {'f1-score':>9}\n")
+
+        for label, *vals in class_rows:
+            print(f"{label:>{w}}  " + "  ".join(f"{self._fmt(v):>9}" for v in vals))
         print()
 
-        for cls, p, r, f in zip(self.classes, precision_vec, recall_vec, f1_vec):
-            print(f"{str(cls):>{name_width}}  {p:>9.5f}  {r:>9.5f}  {f:>9.5f}")
-        print()
-
-        print(f"{'accuracy':>{name_width}}  {'':>9}  {'':>9}  {accuracy:>9.5f}")
-        print(
-            f"{'macro avg':>{name_width}}  "
-            f"{precision_vec.mean():>9.5f}  {recall_vec.mean():>9.5f}  {f1_vec.mean():>9.5f}"
-        )
-        print(f"{'preprocessing avg time':>{name_width}}  {'':>9}  {'':>9}  {times[0]:>9.5f}")
-        print(f"{'index creation avg time':>{name_width}}  {'':>9}  {'':>9}  {times[1]:>9.5f}")
-        print(f"{'experiment avg time':>{name_width}}  {'':>9}  {'':>9}  {times[2]:>9.5f}")
-        print(f"{'total avg time':>{name_width}}  {'':>9}  {'':>9}  {times[3]:>9.5f}")
-        print(f"{'runs':>{name_width}}  {'':>9}  {'':>9}  {runs:>9}")
-        print(f"{'k':>{name_width}}  {'':>9}  {'':>9}  {self.k:>9}")
-        print(f"{'hits':>{name_width}}  {'':>9}  {'':>9}  {self.candidate_count:>9}")
-        print(f"{'dataset':>{name_width}}  {'':>9}  {'':>9}  {self.dataset:>9}")
+        for label, value in summary_rows:
+            if isinstance(value, tuple):
+                cells = [self._fmt(v) for v in value]
+            else:
+                cells = ["", "", self._fmt(value)]
+            print(f"{label:>{w}}  " + "  ".join(f"{c:>9}" for c in cells))
 
 
-    def _save_report_csv(
-        self,
-        precision_vec: np.ndarray,
-        recall_vec: np.ndarray,
-        f1_vec: np.ndarray,
-        accuracy,
-        times: list,
-        runs: int,
-    ):
+    def _save_report_csv(self, *report_args):
+        class_rows, summary_rows = self._build_report(*report_args)
+
         path = os.path.join(self.directory, self.dataset)
         with open(f"{path}_{self.candidate_count}_{self.k}.csv", "w", newline="") as f:
             writer = csv.writer(f)
             writer.writerow(["", "precision", "recall", "f1-score"])
 
-            for cls, p, r, f1 in zip(self.classes, precision_vec, recall_vec, f1_vec):
-                writer.writerow([cls, f"{p:.5f}", f"{r:.5f}", f"{f1:.5f}"])
+            for label, *vals in class_rows:
+                writer.writerow([label, *map(self._fmt, vals)])
 
-            writer.writerow(["accuracy", f"{accuracy:.5f}"])
-            writer.writerow([
-                "macro avg",
-                f"{precision_vec.mean():.5f}",
-                f"{recall_vec.mean():.5f}",
-                f"{f1_vec.mean():.5f}",
-            ])
-            writer.writerow(["preprocessing avg time", f"{times[0]:.5f}"])
-            writer.writerow(["index creation avg time", f"{times[1]:.5f}"])
-            writer.writerow(["experiment avg time", f"{times[2]:.5f}"])
-            writer.writerow(["total avg time", f"{times[3]:.5f}"])
-            writer.writerow(["runs", runs])
-            writer.writerow(["k", self.k])
-            writer.writerow(["hits", self.candidate_count])
-            writer.writerow(["dataset", self.dataset])
+            for label, value in summary_rows:
+                vals = value if isinstance(value, tuple) else (value,)
+                writer.writerow([label, *map(self._fmt, vals)])
 
+                
 if __name__ == "__main__":
     pass
