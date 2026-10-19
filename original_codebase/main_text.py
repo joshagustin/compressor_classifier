@@ -119,41 +119,61 @@ def candidates_exp(
     *,
     examine_candidates: int
 ):
-    train_data = preprocess(train_data, preprocessing_config)
-    test_data = preprocess(test_data, preprocessing_config)
+    cos_preprocessing_config = PreprocessingConfig(
+        normalize=True, remove_stopwords=True, stem=True
+    )
+
+    configs = []
+    if examine_candidates == 0:
+        configs.append(cos_preprocessing_config)
+    elif examine_candidates == 1:
+        configs.append(preprocessing_config)
+        configs.append(cos_preprocessing_config)
+    else:
+        raise ValueError("Examine candidates accepts only 0 or 1.")
+
+    train_out = preprocess(train_data, configs)
+    test_out = preprocess(test_data, configs)
+
+    if examine_candidates == 0:
+        cos_train_data, cos_test_data = train_out.pop(0), test_out.pop(0)
+    elif examine_candidates == 1:
+        ncd_train_data, ncd_test_data = train_out.pop(0), test_out.pop(0)
+        cos_train_data, cos_test_data = train_out.pop(0), test_out.pop(0)
 
     cp = DefaultCompressor(experiment_config.compressor_name)
     knn_exp_ins = KnnExpText(
         experiment_config.agg_func,
         cp,
         experiment_config.dis_func, 
-        train_data,
-        experiment_config.candidate_count
+        cos_train_data,
+        experiment_config.candidate_count,
+        len(train_data),
+        True
     )
 
     if examine_candidates == 0:
         fn = partial(
                 knn_exp_ins.neighbors_cos_accuracy,
-                train_data,
+                cos_train_data,
                 train_label,
             )
         with Pool(8) as p:
-            accuracy_vec = p.map(fn, zip(test_data, test_label))
+            accuracy_vec = p.map(fn, zip(cos_test_data, test_label))
 
         accuracy_vec = np.array(accuracy_vec, dtype=np.float32)
         return accuracy_vec.mean()
     elif examine_candidates == 1:
         fn = partial(
                 knn_exp_ins.compare_cos_ncd_neighbors,
-                train_data
+                ncd_train_data=ncd_train_data,
+                cos_train_data=cos_train_data
             )
         with Pool(8) as p:
-            ratio_vec = p.map(fn, zip(test_data, test_label))
+            ratio_vec = p.map(fn, zip(ncd_test_data, cos_test_data, test_label))
 
         ratio_vec = np.array(ratio_vec, dtype=np.float32)
         return ratio_vec.mean()
-    else:
-        raise ValueError("Examine candidates accepts only 0 or 1.")
 
 
 def record_distance(

@@ -626,15 +626,17 @@ class KnnExpText:
         return correct_vec.mean()
 
     def compare_cos_ncd_neighbors(
-        self, 
-        train_data: list,
-        test_point: tuple
+        self,
+        test_point: tuple,
+        *,
+        ncd_train_data: list,
+        cos_train_data: list,
     ):
-        datum, _ = test_point
-        distance4i = np.asarray(self.calc_dis_single_multi(train_data, datum))
+        ncd_datum, cos_datum, _ = test_point
+        distance4i = np.asarray(self.calc_dis_single_multi(ncd_train_data, ncd_datum))
         ncd_idx = set(np.argpartition(distance4i, range(self.candidate_count))[:self.candidate_count])
 
-        candidates, _ = self.filter_candidates(train_data, datum)
+        candidates, _ = self.filter_candidates(cos_train_data, cos_datum)
         cos_idx = set([c[0] for c in candidates])
 
         idx_intersection_ratio = len(ncd_idx & cos_idx) / self.candidate_count
