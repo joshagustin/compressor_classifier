@@ -3,30 +3,47 @@ import nltk.tokenize as tokenizer
 from nltk.corpus import stopwords
 from nltk.stem import SnowballStemmer
 from configs import PreprocessingConfig
+from typing import Union
 import time
 
 snowball = SnowballStemmer("english")
 
 def preprocess(
     texts: list,
-    config: PreprocessingConfig,
+    config: Union[PreprocessingConfig, list]
 ):
     start = time.time()
 
-    if config.normalize:
-        texts = tokenize_texts(texts)
-        texts = lowercase_tokens(texts)
-        texts = remove_punctuation_tokens(texts)
+    single = not isinstance(config, (list, tuple))
+    configs = [config] if single else list(config)
 
-        if config.remove_stopwords:
-            texts = remove_stopword_tokens(texts)
-        if config.stem:
-            texts = stem_tokens(texts)
+    base = None
+    if any(c.normalize for c in configs):
+        base = tokenize_texts(texts)
+        base = lowercase_tokens(base)
+        base = remove_punctuation_tokens(base)
 
-        texts = detokenize(texts)
+    # Cache token lists by (stopwords_removed, stemmed) so shared steps run once
+    cache = {(False, False): base}
+
+    def get_tokens(stop: bool, stem: bool):
+        key = (stop, stem)
+        if key not in cache:
+            if stem:
+                cache[key] = stem_tokens(get_tokens(stop, False))
+            else:
+                cache[key] = remove_stopword_tokens(base)
+        return cache[key]
+
+    results = []
+    for c in configs:
+        if c.normalize:
+            results.append(detokenize(get_tokens(c.remove_stopwords, c.stem)))
+        else:
+            results.append(texts)
 
     print(f"preprocessed in: {time.time() - start}")
-    return texts
+    return results[0] if single else results
 
 def tokenize_texts(texts: list) -> list:
     return [tokenizer.word_tokenize(text) for text in texts] 

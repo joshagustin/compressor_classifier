@@ -14,7 +14,9 @@
                 "--data_dir",
                 "data/datasets/Ohsumed",
                 "--ncd",
-                "--cos_sim"
+                "--cos_sim",
+                "--k",
+                "5"
             ]
         }
     ]

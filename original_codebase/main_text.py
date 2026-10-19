@@ -34,16 +34,28 @@ def non_neural_knn_exp(
     ncd_train_data = ncd_test_data = None
 
     pre_start = time.time()
-    if experiment_config.cos_sim or experiment_config.oracle:
-        cos_preprocessing_config = PreprocessingConfig(
-            normalize=True, remove_stopwords=True, stem=True
-        )
-        cos_train_data = preprocess(train_data, cos_preprocessing_config)
-        cos_test_data = preprocess(test_data, cos_preprocessing_config)
 
-    if experiment_config.ncd or experiment_config.oracle:
-        ncd_train_data = preprocess(train_data, preprocessing_config)
-        ncd_test_data = preprocess(test_data, preprocessing_config)
+    cos_preprocessing_config = PreprocessingConfig(
+        normalize=True, remove_stopwords=True, stem=True
+    )
+
+    need_ncd = experiment_config.ncd or experiment_config.oracle
+    need_cos = experiment_config.cos_sim or experiment_config.oracle
+
+    configs = []
+    if need_ncd:
+        configs.append(preprocessing_config)
+    if need_cos:
+        configs.append(cos_preprocessing_config)
+
+    train_out = preprocess(train_data, configs)
+    test_out = preprocess(test_data, configs)
+
+    if need_ncd:
+        ncd_train_data, ncd_test_data = train_out.pop(0), test_out.pop(0)
+    if need_cos:
+        cos_train_data, cos_test_data = train_out.pop(0), test_out.pop(0)
+
     pre_duration = time.time() - pre_start
 
     n = len(test_label)
