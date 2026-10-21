@@ -1,0 +1,20 @@
+,precision,recall,f1-score
+0,0.97826,0.90778,0.94170
+1,0.89431,0.90909,0.90164
+2,0.94783,0.99259,0.96970
+3,1.00000,0.70000,0.82353
+4,0.83582,0.76712,0.80000
+5,0.80000,0.84706,0.82286
+6,0.91304,0.58333,0.71186
+7,0.78161,0.93151,0.85000
+accuracy,0.93738
+macro avg,0.89386,0.82981,0.85266
+preprocessing avg time,15.45423
+index creation avg time,0.33606
+experiment avg time,47.71715
+total avg time,63.50744
+runs,3
+k,5
+candidate count,100
+preprocessing,"normalize, stem"
+dataset,R8

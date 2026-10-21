@@ -1,0 +1,16 @@
+,precision,recall,f1-score
+1,0.92646,0.90842,0.91735
+2,0.96068,0.97737,0.96895
+3,0.87112,0.88579,0.87839
+4,0.89530,0.88211,0.88865
+accuracy,0.91342
+macro avg,0.91339,0.91342,0.91334
+preprocessing avg time,60.00333
+index creation avg time,3.63355
+experiment avg time,553.00719
+total avg time,616.64407
+runs,3
+k,5
+candidate count,100
+preprocessing,normalize
+dataset,AG_NEWS

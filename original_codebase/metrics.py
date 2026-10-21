@@ -195,8 +195,17 @@ class GenerateReport:
     def _save_report_csv(self, *report_args):
         class_rows, summary_rows = self._build_report(*report_args)
 
+        config = self.preprocessing_config
+
+        configs = (
+            ("_" if any((config.normalize, config.remove_stopwords, config.stem)) else "")
+            + ("N" if config.normalize else "")
+            + ("R" if config.remove_stopwords else "")
+            + ("S" if config.stem else "")
+        )
+
         path = os.path.join(self.directory, self.dataset)
-        with open(f"{path}_{self.candidate_count}_{self.k}.csv", "w", newline="") as f:
+        with open(f"{path}_{self.candidate_count}_{self.k}{configs}.csv", "w", newline="") as f:
             writer = csv.writer(f)
             writer.writerow(["", "precision", "recall", "f1-score"])
 
