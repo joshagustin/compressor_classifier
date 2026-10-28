@@ -96,12 +96,6 @@ def non_neural_knn_exp(
     exp_duration = time.time() - exp_start
 
     pred_correct_pair = np.array(pred_correct_pair, dtype=np.int32)
-    print("\naccuracy:{}".format(np.average(pred_correct_pair[:, 1])))
-    print(f"\naverage hits: {np.average(pred_correct_pair[:,2])}")
-    print(f"training rows: {len(train_data)}\n")
-
-    print(f"total time: {pre_duration + index_duration + exp_duration}\n")
-
     pred_labels = list(pred_correct_pair[:, 0])
     hits = int(np.mean(pred_correct_pair[:, 2]))
     times = [pre_duration, index_duration, exp_duration]

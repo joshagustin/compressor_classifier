@@ -104,11 +104,11 @@ class GenerateReport:
 
         times = np.array(self.times)
         runs = len(times)
-        pre_avg_time = times[:,0].mean()
-        index_avg_time = times[:,1].mean()
-        exp_avg_time = times[:,2].mean()
-        total_avg_time = pre_avg_time + index_avg_time + exp_avg_time
-        avg_times = [pre_avg_time, index_avg_time, exp_avg_time, total_avg_time]
+        total_times = times.sum(axis=1)
+        pre_times = times[:,0]
+        index_times = times[:,1]
+        exp_times = times[:,2]
+        avg_times = [pre_times, index_times, exp_times, total_times]
 
         report_args = (precision_vec, recall_vec, f1_vec, accuracy, avg_times, runs)
         self._print_report(*report_args)
@@ -154,10 +154,14 @@ class GenerateReport:
         summary_rows = [
             ("accuracy", accuracy),
             ("macro avg", macro_row[1:]),
-            ("preprocessing avg time", times[0]),
-            ("index creation avg time", times[1]),
-            ("experiment avg time", times[2]),
-            ("total avg time", times[3]),
+            ("preprocessing avg time", times[0].mean()),
+            ("preprocessing times", tuple(times[0])),
+            ("index creation avg time", times[1].mean()),
+            ("index creation times", tuple(times[1])),
+            ("experiment avg time", times[2].mean()),
+            ("experiment times", tuple(times[2])),
+            ("total avg time", times[3].mean()),
+            ("individual exp times", tuple(times[3])),
             ("runs", runs),
             ("k", self.k),
             ("candidate count", self.candidate_count),
