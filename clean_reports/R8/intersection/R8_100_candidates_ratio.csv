@@ -1,0 +1,5 @@
+dataset,R8
+train rows,5427
+test rows,2172
+candidate count,100
+average intersection ratio,0.27365562

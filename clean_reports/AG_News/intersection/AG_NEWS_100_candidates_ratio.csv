@@ -1,0 +1,5 @@
+dataset,AG_NEWS
+train rows,120000
+test rows,7600
+candidate count,100
+average intersection ratio,0.24224342

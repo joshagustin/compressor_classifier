@@ -21,11 +21,11 @@
 19,0.59167,0.56574,0.57841
 accuracy,0.61006
 macro avg,0.61351,0.61043,0.61027
-preprocessing avg time,32.31767
-index creation avg time,0.00000
-experiment avg time,2250.76040
-total avg time,2283.07807
-runs,1
+preprocessing avg time,32.76663
+index creation avg time,0.00001
+experiment avg time,2265.76609
+total avg time,2298.53272
+runs,3
 k,5
 candidate count,11314
 preprocessing,"normalize, remove_stopwords"

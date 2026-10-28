@@ -21,11 +21,11 @@
 19,0.56735,0.55378,0.56048
 accuracy,0.61471
 macro avg,0.61749,0.61496,0.61447
-preprocessing avg time,31.12436
+preprocessing avg time,31.73414
 index creation avg time,0.00001
-experiment avg time,2805.93338
-total avg time,2837.05775
-runs,1
+experiment avg time,2880.86997
+total avg time,2912.60411
+runs,3
 k,5
 candidate count,11314
 preprocessing,normalize

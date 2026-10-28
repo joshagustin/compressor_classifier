@@ -1,0 +1,5 @@
+dataset,Ohsumed
+train rows,3357
+test rows,4043
+candidate count,100
+average intersection ratio,0.21186247

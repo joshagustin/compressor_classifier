@@ -5,11 +5,11 @@
 4,0.87280,0.85947,0.86608
 accuracy,0.89066
 macro avg,0.89056,0.89066,0.89053
-preprocessing avg time,60.25980
+preprocessing avg time,60.40759
 index creation avg time,0.00001
-experiment avg time,10656.04346
-total avg time,10716.30327
-runs,1
+experiment avg time,12102.30660
+total avg time,12162.71420
+runs,2
 k,5
 candidate count,120000
 preprocessing,"normalize, remove_stopwords, stem"

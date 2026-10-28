@@ -1,0 +1,5 @@
+dataset,20News
+train rows,11314
+test rows,7532
+candidate count,100
+average intersection ratio,0.14181094
