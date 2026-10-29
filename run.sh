@@ -5,31 +5,31 @@ source /Users/josh/miniforge3/etc/profile.d/conda.sh
 conda activate compressor
 echo "python: $(which python)"
 
-BASE=(python original_codebase/main_text.py --k 5 --runs 5 --dataset Ohsumed --data_dir data/datasets/Ohsumed)
+BASE=(python original_codebase/main_text.py --k 5 --runs 5 --dataset R8 --data_dir data/datasets/R8)
 
-$BASE --report_dir reports/Ohsumed/ncd --ncd
+$BASE --report_dir reports/R8/ncd --ncd
 sleep 300
-$BASE --report_dir reports/Ohsumed/ncd --ncd --no_normalize --no_stem --no_remove_stopwords
+$BASE --report_dir reports/R8/ncd --ncd --no_normalize --no_stem --no_remove_stopwords
 sleep 300
-$BASE --report_dir reports/Ohsumed/ncd --ncd --no_stem --no_remove_stopwords
+$BASE --report_dir reports/R8/ncd --ncd --no_stem --no_remove_stopwords
 sleep 300
-$BASE --report_dir reports/Ohsumed/ncd --ncd --no_stem
+$BASE --report_dir reports/R8/ncd --ncd --no_stem
 sleep 300
-$BASE --report_dir reports/Ohsumed/ncd --ncd --no_remove_stopwords
-sleep 300
-
-$BASE --report_dir reports/Ohsumed/cos --cos_sim 
+$BASE --report_dir reports/R8/ncd --ncd --no_remove_stopwords
 sleep 300
 
-$BASE --report_dir reports/Ohsumed/cos_ncd --ncd --cos_sim
+$BASE --report_dir reports/R8/cos --cos_sim 
 sleep 300
-$BASE --report_dir reports/Ohsumed/cos_ncd --ncd --cos_sim --no_normalize --no_stem --no_remove_stopwords
+
+$BASE --report_dir reports/R8/cos_ncd --ncd --cos_sim
 sleep 300
-$BASE --report_dir reports/Ohsumed/cos_ncd --ncd --cos_sim --no_stem --no_remove_stopwords
+$BASE --report_dir reports/R8/cos_ncd --ncd --cos_sim --no_normalize --no_stem --no_remove_stopwords
 sleep 300
-$BASE --report_dir reports/Ohsumed/cos_ncd --ncd --cos_sim --no_stem
+$BASE --report_dir reports/R8/cos_ncd --ncd --cos_sim --no_stem --no_remove_stopwords
 sleep 300
-$BASE --report_dir reports/Ohsumed/cos_ncd --ncd --cos_sim --no_remove_stopwords
+$BASE --report_dir reports/R8/cos_ncd --ncd --cos_sim --no_stem
+sleep 300
+$BASE --report_dir reports/R8/cos_ncd --ncd --cos_sim --no_remove_stopwords
 
 # chmod +x run.sh
 

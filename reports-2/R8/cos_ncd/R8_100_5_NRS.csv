@@ -9,14 +9,14 @@
 7,0.75862,0.90411,0.82500
 accuracy,0.92818
 macro avg,0.87892,0.82471,0.84352
-preprocessing avg time,7.90143
-preprocessing times,7.87880,7.90759,7.89939,7.92893,7.89244
-index creation avg time,0.30658
-index creation times,0.29485,0.28901,0.36684,0.29524,0.28697
-experiment avg time,45.60595
-experiment times,45.71560,45.33787,45.17973,45.66194,46.13460
-total avg time,53.81396
-individual exp times,53.88925,53.53447,53.44596,53.88612,54.31401
+preprocessing avg time,7.91431
+preprocessing times,7.89453,7.92522,7.90383,7.94502,7.90295
+index creation avg time,0.30428
+index creation times,0.28968,0.29477,0.36025,0.28986,0.28684
+experiment avg time,45.66319
+experiment times,44.98265,44.89150,45.31884,46.38421,46.73877
+total avg time,53.88178
+individual exp times,53.16686,53.11149,53.58293,54.61909,54.92856
 runs,5
 k,5
 candidate count,100

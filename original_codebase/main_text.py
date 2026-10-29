@@ -407,6 +407,8 @@ if __name__ == "__main__":
                 preprocessing_config
             )
             times.append(runtime)
+            if i < args.runs - 1:
+                time.sleep(300)
         report_ins = GenerateReport(
             lab,
             pred,
