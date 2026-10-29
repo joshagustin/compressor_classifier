@@ -5,23 +5,31 @@ source /Users/josh/miniforge3/etc/profile.d/conda.sh
 conda activate compressor
 echo "python: $(which python)"
 
-BASE=(python original_codebase/main_text.py --k 5 --runs 3 --cos --ncd --report_dir clean_reports/R52/cos_ncd --dataset R52 --data_dir data/datasets/R52)
+BASE=(python original_codebase/main_text.py --k 5 --runs 5 --dataset Ohsumed --data_dir data/datasets/Ohsumed)
 
-$BASE --no_normalize --no_remove_stopwords --no_stem
-$BASE --no_remove_stopwords --no_stem
-$BASE --no_stem
-$BASE --no_remove_stopwords
-$BASE
+$BASE --report_dir reports/Ohsumed/ncd --ncd
+sleep 300
+$BASE --report_dir reports/Ohsumed/ncd --ncd --no_normalize --no_stem --no_remove_stopwords
+sleep 300
+$BASE --report_dir reports/Ohsumed/ncd --ncd --no_stem --no_remove_stopwords
+sleep 300
+$BASE --report_dir reports/Ohsumed/ncd --ncd --no_stem
+sleep 300
+$BASE --report_dir reports/Ohsumed/ncd --ncd --no_remove_stopwords
+sleep 300
 
-NEWS20=(python original_codebase/main_text.py --k 5 --runs 3 --cos --ncd --report_dir clean_reports/20News/cos_ncd --dataset 20News)
+$BASE --report_dir reports/Ohsumed/cos --cos_sim 
+sleep 300
 
-$NEWS20 --no_remove_stopwords
-$NEWS20
-
-OHSUMED=(python original_codebase/main_text.py --k 5 --runs 3 --cos --ncd --report_dir clean_reports/Ohsumed/cos_ncd --dataset Ohsumed --data_dir data/datasets/Ohsumed)
-
-$OHSUMED --no_stem
-$OHSUMED
+$BASE --report_dir reports/Ohsumed/cos_ncd --ncd --cos_sim
+sleep 300
+$BASE --report_dir reports/Ohsumed/cos_ncd --ncd --cos_sim --no_normalize --no_stem --no_remove_stopwords
+sleep 300
+$BASE --report_dir reports/Ohsumed/cos_ncd --ncd --cos_sim --no_stem --no_remove_stopwords
+sleep 300
+$BASE --report_dir reports/Ohsumed/cos_ncd --ncd --cos_sim --no_stem
+sleep 300
+$BASE --report_dir reports/Ohsumed/cos_ncd --ncd --cos_sim --no_remove_stopwords
 
 # chmod +x run.sh
 
