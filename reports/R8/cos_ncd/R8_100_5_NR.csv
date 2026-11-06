@@ -1,0 +1,24 @@
+,precision,recall,f1-score
+0,0.97327,0.89193,0.93083
+1,0.88333,0.87603,0.87967
+2,0.93958,0.99352,0.96580
+3,1.00000,0.90000,0.94737
+4,0.84615,0.75342,0.79710
+5,0.77660,0.85882,0.81564
+6,0.87500,0.58333,0.70000
+7,0.80488,0.90411,0.85161
+accuracy,0.93094
+macro avg,0.88735,0.84515,0.86100
+preprocessing avg time,7.86839
+preprocessing times,7.86805,7.86511,7.85492,7.89931,7.85457
+index creation avg time,0.29667
+index creation times,0.28782,0.28028,0.35255,0.28088,0.28179
+experiment avg time,46.25402
+experiment times,46.42307,46.20705,46.13427,46.31465,46.19107
+total avg time,54.41908
+individual exp times,54.57894,54.35243,54.34175,54.49484,54.32743
+runs,5
+k,5
+candidate count,100
+preprocessing,"normalize, remove_stopwords"
+dataset,R8

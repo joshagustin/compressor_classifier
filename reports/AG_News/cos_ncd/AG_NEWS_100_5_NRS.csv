@@ -1,0 +1,20 @@
+,precision,recall,f1-score
+1,0.92745,0.90158,0.91433
+2,0.95679,0.97895,0.96774
+3,0.87273,0.88421,0.87843
+4,0.89278,0.88526,0.88901
+accuracy,0.91250
+macro avg,0.91244,0.91250,0.91238
+preprocessing avg time,59.62477
+preprocessing times,59.75864,60.00128,59.55305,59.40203,59.40885
+index creation avg time,3.67271
+index creation times,3.74544,3.51589,3.68925,3.67162,3.74134
+experiment avg time,574.18195
+experiment times,589.33854,583.35360,567.55701,566.84545,563.81514
+total avg time,637.47943
+individual exp times,652.84262,646.87076,630.79931,629.91911,626.96534
+runs,5
+k,5
+candidate count,100
+preprocessing,"normalize, remove_stopwords, stem"
+dataset,AG_NEWS

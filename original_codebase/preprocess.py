@@ -77,15 +77,14 @@ def detokenize(texts: list) -> list:
     return [" ".join(text) for text in texts]
 
 if __name__ == "__main__":
-    text = ["The quick! brown.", "Fox jumps!", "Over the\n lazy dog."]
+    text = ["From: lerxst@wam.umd.edu (where's my thing)\nSubject: WHAT car is this!?\nNntp-Posting-Host: rac3.wam.umd.edu\nOrganization: University of Maryland, College Park\nLines: 15\n\n I was wondering if anyone out there could enlighten me on this car I saw\nthe other day. It was a 2-door sports car, looked to be from the late 60s/\nearly 70s. It was called a Bricklin. The doors were really small. In addition,\nthe front bumper was separate from the rest of the body. This is \nall I know. If anyone can tellme a model name, engine specs, years\nof production, where this car is made, history, or whatever info you\nhave on this funky looking car, please e-mail.\n\nThanks,\n- IL\n   ---- brought to you by your neighborhood Lerxst ----\n\n\n\n\n"]
+    print(text[0])
     text = tokenize_texts(text)
-    print(text)
     text = lowercase_tokens(text)
-    print(text)
     text = remove_punctuation_tokens(text)
-    print(text)
-
+    print(text[0])
     text = remove_stopword_tokens(text)
-    print(text)
+    print(text[0])
     text = stem_tokens(text)
-    print(detokenize(text))
+    print(text[0])
+    print(detokenize(text)[0])
